@@ -1,0 +1,79 @@
+<div class="auth-main">
+  <div class="auth-wrapper v3">
+    <div class="auth-form">
+      <div class="card my-5">
+        <div class="card-body">
+          <div class="d-flex flex-column align-items-center mb-4">
+            <img src="assets/images/logoAttijari.png" alt="Logo Attijari" style="height: 100px; width: auto; border-radius: 12px; box-shadow: 0 2px 12px rgba(34,34,34,0.10); background: #fff;" />
+            <h2 style="font-family: 'Segoe UI', Arial, sans-serif; font-weight: 700; color: #a85d3b; margin-top: 12px; letter-spacing: 2px; text-shadow: 0 2px 8px #eee;">ROU'ya</h2>
+            <p style="font-family: 'Segoe UI', Arial, sans-serif; color: #333; font-size: 1.05rem; margin-top: 8px; text-align: center; max-width: 320px;">
+              Bienvenue sur <b>ROU'ya</b><br/>
+              La solution intelligente pour le traitement automatisé des fichiers financiers
+            </p>
+          </div>
+          <h1 style="margin-bottom: 18px; text-align: center; color: #e60028; font-size: 2.2rem; font-weight: 700;">Créer un compte</h1>
+         <form [formGroup]="registerForm" (ngSubmit)="onSubmit()">
+  <div class="form-floating mb-3">
+    <input type="text" class="form-control" id="username" formControlName="username" placeholder="Votre nom" />
+    <label for="username">Nom</label>
+    @if (submitted && f['username'].errors) {
+      <div class="text-danger mt-1">
+        @if (f['username'].errors['required']) {
+          <small>Nom est requis</small>
+        }
+        @if (f['username'].errors['minlength']) {
+          <small>Minimum 2 caractères</small>
+        }
+      </div>
+    }
+  </div>
+
+  <div class="form-floating mb-3">
+    <input type="email" class="form-control" id="email" formControlName="email" placeholder="admin@attijari.tn" />
+    <label for="email">Adresse e-mail</label>
+    @if (submitted && f['email'].errors) {
+      <div class="text-danger mt-1">
+        <small *#if="f['email'].errors['required']">Email est requis</small>
+        <small *#if="f['email'].errors['email']">Format invalide</small>
+      </div>
+    }
+  </div>
+
+  <div class="form-floating mb-3">
+    <input type="password" class="form-control" id="password" formControlName="password" placeholder="••••••••" />
+    <label for="password">Mot de passe</label>
+    @if (submitted && f['password'].errors) {
+      <div class="text-danger mt-1">
+        <small *#if="f['password'].errors['required']">Mot de passe requis</small>
+        <small *#if="f['password'].errors['minlength']">Au moins 6 caractères</small>
+      </div>
+    }
+  </div>
+
+  <div class="form-check mt-3 mb-3 text-start">
+    <input class="form-check-input input-primary" type="checkbox" id="termsCheck" formControlName="terms" />
+    <label class="form-check-label" for="termsCheck">
+      J'accepte les <span style="color: #e60028; font-weight: 500;">Conditions d'utilisation</span>
+    </label>
+    @if (submitted && f['terms'].errors) {
+      <div class="text-danger mt-1">
+        <small>Vous devez accepter les conditions</small>
+      </div>
+    }
+  </div>
+
+  <button type="submit" class="btn btn-primary btn-block"
+    style="width: 100%; font-size: 1.1rem; margin-top: 8px; background: linear-gradient(90deg, #ffd600 0%, #e60028 100%); border: none; color: #222; font-weight: bold;">
+    Créer un compte
+  </button>
+</form>
+
+          <hr />
+          <div class="d-flex justify-content-center">
+            <a [routerLink]="['/guest/login']" style="color: #e60028; font-weight: 500;">Vous avez déjà un compte ? Se connecter</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

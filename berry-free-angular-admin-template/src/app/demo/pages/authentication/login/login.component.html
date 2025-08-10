@@ -1,0 +1,48 @@
+<div class="auth-main">
+  <div class="auth-wrapper v3">
+    <div class="auth-form">
+      <div class="card my-5">
+        <div class="card-body">
+          <div class="d-flex flex-column align-items-center mb-4">
+            <img src="assets/images/logoAttijari.png" alt="Logo Attijari" style="height: 100px; width: auto; border-radius: 12px; box-shadow: 0 2px 12px rgba(34,34,34,0.10); background: #fff;" />
+            <h2 style="font-family: 'Segoe UI', Arial, sans-serif; font-weight: 700; color: #a85d3b; margin-top: 12px; letter-spacing: 2px; text-shadow: 0 2px 8px #eee;">ROU'ya</h2>
+            <p style="font-family: 'Segoe UI', Arial, sans-serif; color: #333; font-size: 1.05rem; margin-top: 8px; text-align: center; max-width: 320px;">
+              Bienvenue sur <b>ROU'ya</b><br/>
+              La solution intelligente pour le traitement automatisé des fichiers financiers
+            </p>
+          </div>
+          <h1 style="margin-bottom: 18px; text-align: center; color: #e60028; font-size: 2.2rem; font-weight: 700;">Connexion</h1>
+          <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" style="margin-bottom: 18px;">
+            <div class="form-floating mb-3">
+              <input type="email" class="form-control" id="floatingInput" placeholder="admin@attijari.tn" formControlName="email" />
+              <label for="floatingInput">Adresse e-mail / Nom d'utilisateur</label>
+            </div>
+
+            <div class="form-floating mb-3">
+              <input type="password" class="form-control" id="password" placeholder="••••••••" formControlName="password" />
+              <label for="password">Mot de passe</label>
+            </div>
+
+            <div class="d-flex mt-1 justify-content-between align-items-center">
+              <div class="form-check">
+                <input class="form-check-input input-primary" type="checkbox" id="customCheckc1" formControlName="rememberMe" />
+                <label class="form-check-label text-muted" for="customCheckc1">Se souvenir de moi</label>
+              </div>
+              <a [routerLink]="['/guest/forget-password']" style="color: #e60028; font-weight: 500;">Mot de passe oublié ?</a>
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-block"
+              style="width: 100%; font-size: 1.1rem; margin-top: 18px; background: linear-gradient(135deg, #a85d3b 0%, #3a231a 100%); border: none; color: #ffffff; font-weight: 600;">
+              Se connecter
+            </button>
+          </form>
+
+          <hr />
+          <div class="d-flex justify-content-center">
+            <a [routerLink]="['/guest/register']" style="color: #e60028; font-weight: 500;">Vous n'avez pas de compte ? Créer un compte</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

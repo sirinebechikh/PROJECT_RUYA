@@ -1,0 +1,33 @@
+.b-brand {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  background: none;
+  border-radius: 0;
+  padding: 0;
+  box-shadow: none;
+}
+
+.b-brand img {
+  width: 120px;
+  height: 95px;
+  object-fit: contain;
+  display: block;
+  margin: 0 12px 0 0;
+  padding: 0;
+  background: none;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.nav-logo-img {
+  height: 80px;
+  width: auto;
+  max-width: 180px;
+  display: block;
+  margin: 0 16px 0 0;
+  object-fit: contain;
+  background: none;
+  border-radius: 8px;
+  box-shadow: none;
+}

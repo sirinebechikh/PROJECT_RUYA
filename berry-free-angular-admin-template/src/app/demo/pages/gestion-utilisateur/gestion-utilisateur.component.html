@@ -1,0 +1,66 @@
+<div class="gestion-utilisateur-container">
+  <div class="header-utilisateur">
+    <h2>Gestion des utilisateurs</h2>
+    <button class="ajouter-btn" (click)="ouvrirModal()" title="Ajouter un utilisateur">
+      <i class="ti ti-user-plus"></i> Ajouter
+    </button>
+  </div>
+  <div class="table-responsive">
+    <table class="table-utilisateurs">
+      <thead>
+        <tr>
+          <th>Nom d'utilisateur</th>
+          <th>Email</th>
+          <th>État</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let utilisateur of utilisateurs">
+          <td>{{ utilisateur.username }}</td>
+          <td>{{ utilisateur.email }}</td>
+          <td>
+            <span class="badge" [ngClass]="utilisateur.isActive ? 'badge-actif' : 'badge-inactif'">
+              <i class="ti" [ngClass]="utilisateur.isActive ? 'ti-check' : 'ti-x'" style="font-size: 1rem;"></i>
+              {{ utilisateur.isActive ? 'Actif' : 'Inactif' }}
+            </span>
+          </td>
+          <td class="actions-cell">
+            <button class="action-btn" (click)="activerUtilisateur(utilisateur.id)" [disabled]="utilisateur.isActive" title="Activer">
+              <i class="ti ti-user-check"></i>
+            </button>
+            <button class="action-btn" (click)="desactiverUtilisateur(utilisateur.id)" [disabled]="!utilisateur.isActive" title="Désactiver">
+              <i class="ti ti-user-x"></i>
+            </button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Modal d'ajout d'utilisateur -->
+  <div class="modal-backdrop" *ngIf="isModalOpen">
+    <div class="modal-content">
+      <h3>Ajouter un utilisateur</h3>
+      <form #userForm="ngForm" (ngSubmit)="ajouterUtilisateur()">
+        <div class="form-group">
+          <label>Nom d'utilisateur *</label>
+          <input type="text" [(ngModel)]="newUser.username" name="username" required />
+        </div>
+        <div class="form-group">
+          <label>Email *</label>
+          <input type="email" [(ngModel)]="newUser.email" name="email" required />
+        </div>
+        <div class="form-group">
+          <label>Mot de passe *</label>
+          <input type="password" [(ngModel)]="newUser.password" name="password" required />
+        </div>
+        <div class="text-danger" *ngIf="errorMsg">{{ errorMsg }}</div>
+        <div class="modal-actions">
+          <button type="button" (click)="fermerModal()">Annuler</button>
+          <button type="submit" [disabled]="!userForm.form.valid">Ajouter</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

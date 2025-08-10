@@ -1,0 +1,94 @@
+<!-- Chatbot Widget -->
+<div class="chatbot-widget" [class.expanded]="isExpanded">
+  <!-- Chat Toggle Button -->
+  <div class="chat-toggle" (click)="toggleChat()" *ngIf="!isExpanded">
+    <i class="ti ti-message-circle"></i>
+    <span class="chat-badge">ROU'ya Assistant</span>
+  </div>
+
+  <!-- Chat Window -->
+  <div class="chat-window" *ngIf="isExpanded">
+    <!-- Chat Header -->
+    <div class="chat-header">
+      <div class="chat-title">
+        <i class="ti ti-robot"></i>
+        <span>Assistant ROU'ya</span>
+      </div>
+      <div class="chat-actions">
+        <button class="btn-icon" (click)="clearChat()" title="Effacer la conversation">
+          <i class="ti ti-trash"></i>
+        </button>
+        <button class="btn-icon" (click)="toggleChat()" title="Fermer">
+          <i class="ti ti-x"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Chat Messages -->
+    <div class="chat-messages">
+      <div 
+        *ngFor="let message of messages" 
+        class="message"
+        [class.user-message]="message.isUser"
+        [class.bot-message]="!message.isUser"
+        [class.error-message]="message.type === 'error'"
+        [class.success-message]="message.type === 'success'"
+        [class.info-message]="message.type === 'info'"
+      >
+        <div class="message-content">
+          <div class="message-text" [innerHTML]="message.text | markdown"></div>
+          <div class="message-time">
+            {{ message.timestamp | date:'HH:mm' }}
+          </div>
+        </div>
+      </div>
+
+      <!-- Loading indicator -->
+      <div class="message bot-message" *ngIf="isLoading">
+        <div class="message-content">
+          <div class="typing-indicator">
+            <span></span>
+            <span></span>
+            <span></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Suggestions -->
+    <div class="chat-suggestions" *ngIf="suggestions.length > 0">
+      <div class="suggestions-title">💡 Questions suggérées:</div>
+      <div class="suggestion-chips">
+        <button 
+          *ngFor="let suggestion of suggestions" 
+          class="suggestion-chip"
+          (click)="useSuggestion(suggestion)"
+        >
+          {{ suggestion }}
+        </button>
+      </div>
+    </div>
+
+    <!-- Chat Input -->
+    <div class="chat-input">
+      <div class="input-group">
+        <textarea
+          [(ngModel)]="currentMessage"
+          (keypress)="onKeyPress($event)"
+          placeholder="Posez votre question sur RU'ya..."
+          class="form-control"
+          rows="1"
+          [disabled]="isLoading"
+        ></textarea>
+        <button 
+          class="btn btn-primary send-btn"
+          (click)="sendMessage()"
+          [disabled]="!currentMessage.trim() || isLoading"
+        >
+          <i class="ti ti-send" *ngIf="!isLoading"></i>
+          <i class="ti ti-loader rotating" *ngIf="isLoading"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

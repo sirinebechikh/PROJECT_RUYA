@@ -1,0 +1,195 @@
+ <!-- default.component.html -->
+<div class="ruya-app" [class.session-closed]="!sessionActive()">
+  <!-- Header -->
+  <header class="app-header">
+    <div class="header-content">
+      <div class="brand-section">
+        <div class="brand-logo">
+          <div class="logo-icon">
+            <i class="fas fa-gem"></i>
+          </div>
+          <div class="brand-text">
+            <h1>RUYA</h1>
+            <p class="brand-subtitle">Application de Suivi et de Gestion</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <div class="session-info">
+          <div class="status-badge" [class]="sessionActive() ? 'status-active' : 'status-inactive'">
+            <i class="fas fa-circle pulse"></i>
+            <span>{{ sessionActive() ? 'Session Active' : 'Session Fermée' }}</span>
+          </div>
+          <div class="date-display">
+            <i class="fas fa-calendar-alt"></i>
+            <span>{{ currentDate() | date:'dd/MM/yyyy' }}</span>
+          </div>
+        </div>
+
+        <div class="action-buttons">
+          <button class="btn btn-export" (click)="onExportData()" [disabled]="isLoading()">
+            <i class="fas fa-download"></i>
+          </button>
+             
+          <button class="btn btn-close" (click)="onCloseApp()">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Dashboard -->
+  <main class="dashboard-main">
+    <div class="dashboard-container">
+      <!-- Cards Grid -->
+      <div class="cards-grid">
+        <div 
+          class="dashboard-card animate-fade-in" 
+          *ngFor="let card of cardData(); trackBy: trackByIndex"
+          [ngClass]="getCardClass(card.type)"
+        >
+          <div class="card-header">
+            <div class="card-title">
+              <i [class]="card.icon"></i>
+              <span>{{ card.title }}</span>
+            </div>
+            <div class="card-indicator"></div>
+          </div>
+
+          <div class="card-content">
+            <div 
+              class="data-row" 
+              *ngFor="let row of card.data; trackBy: trackByIndex"
+            >
+              <div class="data-label">{{ row.label }}</div>
+              
+              <div class="data-values">
+                <!-- Status Display -->
+                <div 
+                  *ngIf="row.status && typeof row.value === 'string'" 
+                  class="status-indicator"
+                  [ngClass]="getStatusClass(row.status)"
+                >
+                  <i class="fas fa-circle"></i>
+                  <span>{{ row.value }}</span>
+                </div>
+
+                <!-- Numeric Value Display -->
+                <div *ngIf="typeof row.value === 'number'" class="data-value">
+                  {{ row.value | number:'1.0-0' }}
+                </div>
+
+                <!-- Amount Display -->
+                <div *ngIf="row.amount" class="data-amount">
+                  {{ row.amount }}
+                </div>
+              </div>
+            </div>
+
+            <!-- Special Input Fields for Session and CTR Cards -->
+            <div *ngIf="card.title === 'Session du Jour'" class="input-section">
+              <div class="form-group">
+                <label>Date de session</label>
+                <input 
+                  type="date" 
+                  class="form-input" 
+                  [ngModel]="currentDate()" 
+                  (ngModelChange)="currentDate.set($event)"
+                >
+              </div>
+            </div>
+
+            <div *ngIf="card.title === 'Carthago avant CTR'" class="input-section">
+              <div class="form-group">
+                <label>Prochaine génération</label>
+                <input type="time" class="form-input" value="14:30">
+              </div>
+            </div>
+
+            <div *ngIf="card.title === 'Actions et Contrôles'" class="action-section">
+              <div class="button-group">
+                <button 
+                  class="btn btn-primary" 
+                  (click)="onRegenerateFiles()" 
+                  [disabled]="isLoading()"
+                >
+                  <i class="fas fa-sync-alt" [class.spinning]="isLoading()"></i>
+                  <span>{{ isLoading() ? 'Traitement...' : 'Regénérer' }}</span>
+                </button>
+                
+                <button 
+                  class="btn btn-success" 
+                  (click)="onValidateData()" 
+                  [disabled]="isLoading()"
+                >
+                  <i class="fas fa-check"></i>
+                  <span>Valider</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Global Statistics -->
+      <div class="global-stats animate-fade-in">
+        <div class="stats-header">
+          <h2>
+            <i class="fas fa-chart-line"></i>
+            Résumé Global de la Journée
+          </h2>
+          <div class="stats-subtitle">Tableau de bord consolidé - RUYA</div>
+        </div>
+
+        <div class="stats-grid">
+          <div 
+            class="stat-card" 
+            *ngFor="let stat of globalStats(); trackBy: trackByIndex"
+          >
+            <div class="stat-icon">
+              <i class="fas fa-chart-bar"></i>
+            </div>
+            <div class="stat-content">
+              <div class="stat-number">{{ stat.number }}</div>
+              <div class="stat-label">{{ stat.label }}</div>
+              <div class="stat-amount" *ngIf="stat.amount">{{ stat.amount }}</div>
+              <div 
+                class="stat-status" 
+                *ngIf="stat.status"
+                [ngClass]="getStatusClass('success')"
+              >
+                <i class="fas fa-trending-up"></i>
+                {{ stat.status }}
+              </div>
+            </div>
+            <div *ngIf="stat.label === 'Dernière MAJ'" class="loading-indicator">
+              <div class="loading-spinner"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="total-summary">
+          <div class="summary-item">
+            <span class="summary-label">Total Consolidé:</span>
+            <span class="summary-value">{{ totalAmount() }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Loading Overlay -->
+  <div class="loading-overlay" *ngIf="isLoading()">
+    <div class="loading-content">
+      <div class="loading-spinner large"></div>
+      <p>Traitement en cours...</p>
+    </div>
+  </div>
+
+  <!-- Notification Container -->
+  <div class="notification-container">
+    <!-- Notifications will be dynamically added here -->
+  </div>
+</div>

@@ -1,0 +1,367 @@
+<div class="suivi-ctr-bo">
+  <!-- Header Simple -->
+  <div class="dashboard-header">
+    <div class="dashboard-title">
+      <h1><i class="ti ti-chart-line me-3"></i>Suivi CTR/BO</h1>
+      <p class="dashboard-subtitle">Contrôle et validation des fichiers financiers</p>
+    </div>
+  </div>
+
+  <!-- Statut de Connexion -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="card" style="display: flex; align-items: center; justify-content: space-between; padding: 1.5rem;">
+        <div>
+          <div style="font-weight: bold; font-size: 1.25rem;">
+            <i class="ti ti-wifi me-2"></i>
+            Statut de Connexion
+          </div>
+          <div style="color: #6c757d; font-size: 1rem;">
+            <i class="ti ti-database me-2"></i>
+            Base de données et Carthago
+          </div>
+        </div>
+        <div style="display: flex; align-items: center;">
+          <span style="display: inline-block; width: 28px; height: 28px; border-radius: 50%; background: #d4f5dd; border: 4px solid #d4f5dd; margin-right: 0.5rem;">
+            <span style="display: block; width: 16px; height: 16px; background: #4caf50; border-radius: 50%; margin: 4px auto;"></span>
+          </span>
+          <span style="font-weight: 600; color: #2e3a59;">Connecté</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Vue d'ensemble simple -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="overview-card">
+        <div class="card-header">
+          <h5 class="card-title">
+            <i class="ti ti-dashboard me-2"></i>
+            Vue d'ensemble du Processus
+          </h5>
+        </div>
+        <div class="card-body">
+          <div class="overview-steps">
+            <div class="step">
+              <div class="step-number">1</div>
+              <div class="step-info">
+                <h6><i class="ti ti-file-plus me-2"></i>Fichiers créés dans RU'ya</h6>
+                <p>{{ totalFichiersCrees }} fichiers</p>
+              </div>
+            </div>
+            <div class="step-arrow">
+              <i class="ti ti-arrow-right"></i>
+            </div>
+            <div class="step">
+              <div class="step-number">2</div>
+              <div class="step-info">
+                <h6><i class="ti ti-send me-2"></i>Envoyés vers Carthago</h6>
+                <p [ngClass]="{'text-danger': totalFichiersEnvoyes < totalFichiersCrees}">
+                  {{ totalFichiersEnvoyes }}/{{ totalFichiersCrees }} fichiers
+                </p>
+              </div>
+            </div>
+            <div class="step-arrow">
+              <i class="ti ti-arrow-right"></i>
+            </div>
+            <div class="step">
+              <div class="step-number">3</div>
+              <div class="step-info">
+                <h6><i class="ti ti-check me-2"></i>Validés par CTR/BO</h6>
+                <p [ngClass]="{'text-danger': totalFichiersValides < totalFichiersEnvoyes}">
+                  {{ totalFichiersValides }}/{{ totalFichiersEnvoyes }} fichiers
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Statistiques principales -->
+  <div class="row mb-4">
+    <div class="col-xl-3 col-lg-6 col-md-6">
+      <div class="stat-card card-total">
+        <div class="card-body">
+          <div class="d-flex align-items-center">
+            <div class="stat-icon">
+              <i class="ti ti-files"></i>
+            </div>
+            <div class="stat-content">
+              <h3 class="stat-number">{{ totalFichiers }}</h3>
+              <p class="stat-label">Total Fichiers</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="col-xl-3 col-lg-6 col-md-6">
+      <div class="stat-card card-valides">
+        <div class="card-body">
+          <div class="d-flex align-items-center">
+            <div class="stat-icon">
+              <i class="ti ti-check-circle"></i>
+            </div>
+            <div class="stat-content">
+              <h3 class="stat-number">{{ fichiersValides }}</h3>
+              <p class="stat-label">Validés</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="col-xl-3 col-lg-6 col-md-6">
+      <div class="stat-card card-en-attente">
+        <div class="card-body">
+          <div class="d-flex align-items-center">
+            <div class="stat-icon">
+              <i class="ti ti-clock"></i>
+            </div>
+            <div class="stat-content">
+              <h3 class="stat-number">{{ fichiersEnAttente }}</h3>
+              <p class="stat-label">En Attente</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="col-xl-3 col-lg-6 col-md-6">
+      <div class="stat-card card-erreurs">
+        <div class="card-body">
+          <div class="d-flex align-items-center">
+            <div class="stat-icon">
+              <i class="ti ti-alert-triangle"></i>
+            </div>
+            <div class="stat-content">
+              <h3 class="stat-number">{{ fichiersErreurs }}</h3>
+              <p class="stat-label">Erreurs</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recherche simple -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="search-card">
+        <div class="card-header">
+          <h5 class="card-title">
+            <i class="ti ti-search me-2"></i>
+            Rechercher des fichiers
+          </h5>
+        </div>
+        <div class="card-body">
+          <form [formGroup]="suiviForm" (ngSubmit)="rechercherFichiers()">
+            <div class="row">
+              <div class="col-md-4">
+                <div class="form-group">
+                  <label for="date">
+                    <i class="ti ti-calendar me-2"></i>Date
+                  </label>
+                  <input type="date" id="date" formControlName="date" class="form-control">
+                </div>
+              </div>
+              <div class="col-md-4">
+                <div class="form-group">
+                  <label for="statut">
+                    <i class="ti ti-filter me-2"></i>Statut
+                  </label>
+                  <select id="statut" formControlName="statut" class="form-control">
+                    <option value="">Tous les statuts</option>
+                    <option value="REMIS">REMIS</option>
+                    <option value="REJET">REJET</option>
+                    <option value="RENDU">RENDU</option>
+                    <option value="EN_ATTENTE">EN ATTENTE</option>
+                  </select>
+                </div>
+              </div>
+              <div class="col-md-4">
+                <div class="form-group">
+                  <label>&nbsp;</label>
+                  <button type="submit" class="btn btn-primary btn-block w-100" [disabled]="isLoading">
+                    <i class="ti ti-search me-2" *ngIf="!isLoading"></i>
+                    <i class="ti ti-loader ti-spin me-2" *ngIf="isLoading"></i>
+                    {{ isLoading ? 'Recherche...' : 'Rechercher' }}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Liste des fichiers -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="files-card">
+        <div class="card-header">
+          <h5 class="card-title">
+            <i class="ti ti-list me-2"></i>
+            Liste des Fichiers
+            <span class="badge bg-primary ms-2">{{ fichiersListe.length }}</span>
+          </h5>
+        </div>
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table table-striped">
+              <thead>
+                <tr>
+                  <th><i class="ti ti-file me-2"></i>Nom du Fichier</th>
+                  <th><i class="ti ti-tag me-2"></i>Type</th>
+                  <th><i class="ti ti-currency-dollar me-2"></i>Montant</th>
+                  <th><i class="ti ti-flag me-2"></i>Statut</th>
+                  <th><i class="ti ti-calendar me-2"></i>Date</th>
+                  <th><i class="ti ti-settings me-2"></i>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let fichier of fichiersListe">
+                  <td>
+                    <i class="ti ti-file me-2"></i>
+                    {{ fichier.nomFichier }}
+                  </td>
+                  <td>
+                    <span class="badge" [ngClass]="{
+                      'badge-primary': fichier.typeFichier === 'cheque',
+                      'badge-secondary': fichier.typeFichier === 'effet',
+                      'badge-info': fichier.typeFichier === 'virement'
+                    }">
+                      <i class="ti ti-tag me-1"></i>
+                      {{ fichier.typeFichier | titlecase }}
+                    </span>
+                  </td>
+                  <td>
+                    <i class="ti ti-currency-dollar me-1"></i>
+                    {{ fichier.montant | currency:'TND':'symbol':'1.2-2' }}
+                  </td>
+                                                <td>
+                                <span class="badge" [ngClass]="{
+                                  'badge-success': fichier.statut === 'REMIS',
+                                  'badge-danger': fichier.statut === 'REJET',
+                                  'badge-info': fichier.statut === 'RENDU',
+                                  'badge-warning': fichier.statut === 'EN_ATTENTE'
+                                }">
+                                  <i class="ti ti-flag me-1"></i>
+                                  {{ fichier.statut }}
+                                </span>
+                              </td>
+                  <td>
+                    <i class="ti ti-calendar me-1"></i>
+                    {{ fichier.createdAt | date:'dd/MM/yyyy HH:mm' }}
+                  </td>
+                  <td>
+                    <button class="btn btn-sm btn-outline-primary" (click)="voirDetails(fichier)" title="Voir les détails">
+                      <i class="ti ti-eye"></i>
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Détails du fichier sélectionné -->
+  <div class="row" *ngIf="fichierSelectionne">
+    <div class="col-12">
+      <div class="details-card">
+        <div class="card-header">
+          <h5 class="card-title">
+            <i class="ti ti-info-circle me-2"></i>
+            Détails du Fichier
+          </h5>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-6">
+              <h6><i class="ti ti-user me-2"></i>Informations Générales</h6>
+              <table class="table table-sm">
+                <tr>
+                  <td><strong><i class="ti ti-file me-2"></i>Nom:</strong></td>
+                  <td>{{ fichierSelectionne.nomFichier }}</td>
+                </tr>
+                <tr>
+                  <td><strong><i class="ti ti-tag me-2"></i>Type:</strong></td>
+                  <td>{{ fichierSelectionne.typeFichier | titlecase }}</td>
+                </tr>
+                <tr>
+                  <td><strong><i class="ti ti-currency-dollar me-2"></i>Montant:</strong></td>
+                  <td>{{ fichierSelectionne.montant | currency:'TND':'symbol':'1.2-2' }}</td>
+                </tr>
+                <tr>
+                  <td><strong><i class="ti ti-flag me-2"></i>Statut:</strong></td>
+                                                <td>
+                                <span class="badge" [ngClass]="{
+                                  'badge-success': fichierSelectionne.statut === 'REMIS',
+                                  'badge-danger': fichierSelectionne.statut === 'REJET',
+                                  'badge-info': fichierSelectionne.statut === 'RENDU',
+                                  'badge-warning': fichierSelectionne.statut === 'EN_ATTENTE'
+                                }">
+                                  <i class="ti ti-flag me-1"></i>
+                                  {{ fichierSelectionne.statut }}
+                                </span>
+                              </td>
+                </tr>
+              </table>
+            </div>
+            <div class="col-md-6">
+              <h6><i class="ti ti-settings me-2"></i>Informations Techniques</h6>
+              <table class="table table-sm">
+                <tr>
+                  <td><strong><i class="ti ti-code me-2"></i>Code Valeur:</strong></td>
+                  <td>{{ fichierSelectionne.codeValeur }}</td>
+                </tr>
+                <tr>
+                  <td><strong><i class="ti ti-arrow-right me-2"></i>Sens:</strong></td>
+                  <td>{{ fichierSelectionne.sens | titlecase }}</td>
+                </tr>
+                <tr>
+                  <td><strong><i class="ti ti-hash me-2"></i>Nombre:</strong></td>
+                  <td>{{ fichierSelectionne.nomber }}</td>
+                </tr>
+                <tr>
+                  <td><strong><i class="ti ti-calendar me-2"></i>Date Création:</strong></td>
+                  <td>{{ fichierSelectionne.createdAt | date:'dd/MM/yyyy HH:mm' }}</td>
+                </tr>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Statut de connexion -->
+  <div class="row mt-4">
+    <div class="col-12">
+      <div class="status-card">
+        <div class="card-body">
+          <div class="d-flex align-items-center justify-content-between">
+            <div class="status-info">
+              <h6><i class="ti ti-wifi me-2"></i>Statut de Connexion</h6>
+              <p class="mb-0"><i class="ti ti-database me-2"></i>Base de données et Carthago</p>
+            </div>
+            <div class="status-indicator">
+              <span class="status-dot" [ngClass]="{'online': isOnline, 'offline': !isOnline}"></span>
+              <span class="status-text">
+                <i class="ti ti-circle me-1"></i>
+                {{ isOnline ? 'Connecté' : 'Déconnecté' }}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div> 
