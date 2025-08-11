@@ -47,7 +47,7 @@ public class AnomalieDTO {
             case "EQUILIBRAGE_NOMBRE":
                 return "Vérifier la cohérence entre Carthago, Fichiers et CTR";
             case "EQUILIBRAGE_MONTANT":
-                return "Contrôler les montants et identifier les écarts";
+                return "Controller les montants et identifier les écarts";
             case "REMISES_NON_PARVENUES":
                 return "Investiguer les remises en attente et relancer si nécessaire";
             case "IMAGES_STATUT3":
