@@ -7,6 +7,7 @@ import org.springframework.stereotype.Repository;
 import tn.esprit.ruya.models.CTR;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Repository
 public interface CtrRepository extends JpaRepository<CTR, Long> {
@@ -48,4 +49,7 @@ public interface CtrRepository extends JpaRepository<CTR, Long> {
 
     @Query("SELECT COALESCE(SUM(c.difference), 0.0) FROM CTR c WHERE c.createdAt BETWEEN :start AND :end")
     Double sumDifferenceByCreatedAtBetween(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
+
+    // === MÉTHODE AJOUTÉE POUR RÉSOUDRE L'ERREUR ===
+    List<CTR> findAllByCreatedAtBetween(LocalDateTime start, LocalDateTime end);
 }
