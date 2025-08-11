@@ -1,3 +1,4 @@
+// ====== FichierRepository.java - Corrigé ======
 package tn.esprit.ruya.repositories;
 
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -11,59 +12,50 @@ import java.time.LocalDateTime;
 @Repository
 public interface FichierRepository extends JpaRepository<Fichier, Long> {
 
-    // Comptage par période
-    @Query("SELECT COUNT(f) FROM Fichier f WHERE f.createdAt BETWEEN :start AND :end")
-    Integer countByCreatedAtBetween(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
+    // === MÉTHODES DE BASE ===
+    Long countByCreatedAtBetween(LocalDateTime start, LocalDateTime end);
 
-    // Somme des montants par période
     @Query("SELECT COALESCE(SUM(f.montant), 0.0) FROM Fichier f WHERE f.createdAt BETWEEN :start AND :end")
     Double sumMontantByCreatedAtBetween(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
 
-    // Comptage par type de fichier
-    @Query("SELECT COUNT(f) FROM Fichier f WHERE f.createdAt BETWEEN :start AND :end AND f.typeFichier = :typeFichier")
-    Integer countByCreatedAtBetweenAndTypeFichier(@Param("start") LocalDateTime start,
-                                                  @Param("end") LocalDateTime end,
-                                                  @Param("typeFichier") String typeFichier);
+    // === MÉTHODES EXISTANTES ===
+    Long countByCreatedAtBetweenAndTypeFichier(LocalDateTime start, LocalDateTime end, String typeFichier);
+    Long countByCreatedAtBetweenAndNatureFichier(LocalDateTime start, LocalDateTime end, String natureFichier);
+    Long countByCreatedAtBetweenAndCodeValeur(LocalDateTime start, LocalDateTime end, String codeValeur);
 
-    // Somme par type de fichier
-    @Query("SELECT COALESCE(SUM(f.montant), 0.0) FROM Fichier f WHERE f.createdAt BETWEEN :start AND :end AND f.typeFichier = :typeFichier")
-    Double sumMontantByCreatedAtBetweenAndTypeFichier(@Param("start") LocalDateTime start,
-                                                      @Param("end") LocalDateTime end,
-                                                      @Param("typeFichier") String typeFichier);
+    @Query("SELECT COALESCE(SUM(f.montant), 0.0) FROM Fichier f WHERE f.createdAt BETWEEN :start AND :end AND f.typeFichier = :type")
+    Double sumMontantByCreatedAtBetweenAndTypeFichier(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end, @Param("type") String type);
 
-    // Comptage par nature de fichier
-    @Query("SELECT COUNT(f) FROM Fichier f WHERE f.createdAt BETWEEN :start AND :end AND f.natureFichier = :natureFichier")
-    Integer countByCreatedAtBetweenAndNatureFichier(@Param("start") LocalDateTime start,
-                                                    @Param("end") LocalDateTime end,
-                                                    @Param("natureFichier") String natureFichier);
+    @Query("SELECT COALESCE(SUM(f.montant), 0.0) FROM Fichier f WHERE f.createdAt BETWEEN :start AND :end AND f.natureFichier = :nature")
+    Double sumMontantByCreatedAtBetweenAndNatureFichier(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end, @Param("nature") String nature);
 
-    // Somme par nature de fichier
-    @Query("SELECT COALESCE(SUM(f.montant), 0.0) FROM Fichier f WHERE f.createdAt BETWEEN :start AND :end AND f.natureFichier = :natureFichier")
-    Double sumMontantByCreatedAtBetweenAndNatureFichier(@Param("start") LocalDateTime start,
-                                                        @Param("end") LocalDateTime end,
-                                                        @Param("natureFichier") String natureFichier);
+    @Query("SELECT COALESCE(SUM(f.montant), 0.0) FROM Fichier f WHERE f.createdAt BETWEEN :start AND :end AND f.codeValeur = :code")
+    Double sumMontantByCreatedAtBetweenAndCodeValeur(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end, @Param("code") String code);
 
-    // Comptage par code valeur
-    @Query("SELECT COUNT(f) FROM Fichier f WHERE f.createdAt BETWEEN :start AND :end AND f.codeValeur = :codeValeur")
-    Integer countByCreatedAtBetweenAndCodeValeur(@Param("start") LocalDateTime start,
-                                                 @Param("end") LocalDateTime end,
-                                                 @Param("codeValeur") String codeValeur);
+    // === NOUVELLES MÉTHODES DASHBOARD ===
 
-    // Somme par code valeur
-    @Query("SELECT COALESCE(SUM(f.montant), 0.0) FROM Fichier f WHERE f.createdAt BETWEEN :start AND :end AND f.codeValeur = :codeValeur")
-    Double sumMontantByCreatedAtBetweenAndCodeValeur(@Param("start") LocalDateTime start,
-                                                     @Param("end") LocalDateTime end,
-                                                     @Param("codeValeur") String codeValeur);
+    // Client Externe
+    Long countByCreatedAtBetweenAndStatutRemise(LocalDateTime start, LocalDateTime end, String statutRemise);
+    Long countByCreatedAtBetweenAndOrigineSaisie(LocalDateTime start, LocalDateTime end, String origineSaisie);
+    Long countByCreatedAtBetweenAndClientExterneIdIsNotNull(LocalDateTime start, LocalDateTime end);
 
-    // Comptage par sens
-    @Query("SELECT COUNT(f) FROM Fichier f WHERE f.createdAt BETWEEN :start AND :end AND f.sens = :sens")
-    Integer countByCreatedAtBetweenAndSens(@Param("start") LocalDateTime start,
-                                           @Param("end") LocalDateTime end,
-                                           @Param("sens") String sens);
+    @Query("SELECT COALESCE(SUM(f.montant), 0.0) FROM Fichier f WHERE f.createdAt BETWEEN :start AND :end AND f.statutRemise = :statut")
+    Double sumMontantByCreatedAtBetweenAndStatutRemise(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end, @Param("statut") String statut);
 
-    // Somme par sens
-    @Query("SELECT COALESCE(SUM(f.montant), 0.0) FROM Fichier f WHERE f.createdAt BETWEEN :start AND :end AND f.sens = :sens")
-    Double sumMontantByCreatedAtBetweenAndSens(@Param("start") LocalDateTime start,
-                                               @Param("end") LocalDateTime end,
-                                               @Param("sens") String sens);
+    // F_GENERER par Encaisse
+    Long countByCreatedAtBetweenAndGenereParEncaisse(LocalDateTime start, LocalDateTime end, Boolean genereParEncaisse);
+    Long countByCreatedAtBetweenAndTypeEncaissement(LocalDateTime start, LocalDateTime end, String typeEncaissement);
+
+    @Query("SELECT COALESCE(SUM(f.montant), 0.0) FROM Fichier f WHERE f.createdAt BETWEEN :start AND :end AND f.genereParEncaisse = :genere")
+    Double sumMontantByCreatedAtBetweenAndGenereParEncaisse(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end, @Param("genere") Boolean genere);
+
+    // Validation BO
+    Long countByCreatedAtBetweenAndValidationBO(LocalDateTime start, LocalDateTime end, Boolean validationBO);
+
+    @Query("SELECT COALESCE(SUM(f.montant), 0.0) FROM Fichier f WHERE f.createdAt BETWEEN :start AND :end AND f.validationBO = :validation")
+    Double sumMontantByCreatedAtBetweenAndValidationBO(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end, @Param("validation") Boolean validation);
+
+    // === COMBINAISONS COMPLEXES ===
+    Long countByCreatedAtBetweenAndTypeFichierAndOrigineSaisie(LocalDateTime start, LocalDateTime end, String typeFichier, String origineSaisie);
+    Long countByCreatedAtBetweenAndValidationBOAndCodeValeur(LocalDateTime start, LocalDateTime end, Boolean validationBO, String codeValeur);
 }
