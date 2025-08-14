@@ -34,26 +34,16 @@ export class DefaultComponent implements OnInit, OnDestroy {
   // Données mock par défaut (utilisées si le backend n'est pas disponible)
   private mockCardData: CardData[] = [
     {
-      title: 'Client Externe',
-      icon: 'fas fa-user-circle',
-      type: 'primary',
+      title: 'ENCAISSE_VALEUR',
+      icon: 'fas fa-globe',
+      type: 'success',
       data: [
-        { label: 'Statut', value: 'Actif', status: 'success' },
-        { label: 'En cours de saisie', value: 12, amount: '15 450 €' },
+        { label: 'Remises créées', value: 34, amount: '45 670 €' },
+        { label: 'Chèques web', value: 142, amount: '19 580 €' },
       ]
-    },
+    },  
     {
-      title: 'Session du Jour',
-      icon: 'fas fa-calendar',
-      type: 'default',
-      data: [
-        { label: 'Chèques traités', value: 156, amount: '21 340 €' },
-        { label: 'Chèques électroniques', value: 89, amount: '12 560 €' },
-        { label: 'Chèques manuels', value: 67, amount: '9 830 €' }
-      ]
-    },
-    {
-      title: 'F_GENERER par Encaisse',
+      title: 'FICHIERS_GENERER par Encaisse',
       icon: 'fas fa-cogs',
       type: 'default',
       data: [
@@ -61,15 +51,7 @@ export class DefaultComponent implements OnInit, OnDestroy {
         { label: 'Total des remises', value: 290, amount: '412 400 €' }
       ]
     },
-    {
-      title: 'Client Externe Web',
-      icon: 'fas fa-globe',
-      type: 'success',
-      data: [
-        { label: 'Remises créées', value: 34, amount: '45 670 €' },
-        { label: 'Chèques web', value: 142, amount: '19 580 €' },
-      ]
-    },
+     
     {
       title: 'Fichiers Carthago',
       icon: 'fas fa-server',
@@ -80,16 +62,7 @@ export class DefaultComponent implements OnInit, OnDestroy {
         { label: 'Reçus par CTR', value: 1089, amount: '142 350 €' }
       ]
     },
-    {
-      title: 'Validation BO Dinars',
-      icon: 'fas fa-check-double',
-      type: 'default',
-      data: [
-        { label: 'Remises validées BO', value: 45, amount: '67 890 €' },
-        { label: 'Chèques BO Dinars', value: 234, amount: '32 160 €' },
-        { label: 'Chèques Web BO', value: 187, amount: '25 940 €' }
-      ]
-    },
+
     {
       title: 'Carthago avant CTR',
       icon: 'fas fa-exchange-alt',
@@ -117,8 +90,7 @@ export class DefaultComponent implements OnInit, OnDestroy {
       data: [
         { label: 'Remises non parvenues', value: 'En attente', status: 'warning' },
         { label: 'CARTHAGO après CTR', value: 'OK', status: 'success' },
-        { label: 'Chèques à vérifier', value: 23, amount: '3 240 €' }
-      ]
+       ]
     }
   ];
 
