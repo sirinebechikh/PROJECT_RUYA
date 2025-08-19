@@ -3,6 +3,7 @@ import { BehaviorSubject, Observable, Subject } from 'rxjs';
 import { HttpClient } from '@angular/common/http';
 import { tap } from 'rxjs/operators';
 import { SuiviCtrBoService } from '../suivi-ctr-bo/suivi-ctr-bo.service';
+import { CurrentUserService } from '../../services/current-user.service';
 
 export interface FileEvent {
   type: 'ajout' | 'envoi' | 'reception';
@@ -33,7 +34,8 @@ export class AjouterFichierService {
 
   constructor(
     private http: HttpClient,
-    private suiviCtrBoService: SuiviCtrBoService
+    private suiviCtrBoService: SuiviCtrBoService,
+    private currentUserService: CurrentUserService
   ) {}
 
   openModal() {
@@ -45,9 +47,14 @@ export class AjouterFichierService {
   }
 
   getAllFichiers(): Observable<any[]> {
-    const user = JSON.parse(localStorage.getItem('user') || '{}');
-    const id = user.id;
-    return this.http.get<any[]>(`${this.baseUrl}/getallbyuser/${id}`);
+    try {
+      const userId = this.currentUserService.requireUserId();
+      console.log('📋 Récupération des fichiers pour l\'utilisateur:', this.currentUserService.getUserLogInfo());
+      return this.http.get<any[]>(`${this.baseUrl}/getallbyuser/${userId}`);
+    } catch (error) {
+      console.error('❌ Erreur lors de la récupération des fichiers:', error);
+      throw error;
+    }
   }
 
   ajouterFichier(fichier: any): Observable<any> {
@@ -58,13 +65,11 @@ export class AjouterFichierService {
         console.log('✅ Fichier sauvegardé en base:', nouveauFichier);
         console.log('🔍 DEBUG - Fichier créé avec utilisateur:', nouveauFichier.user);
         
-        // Obtenir le nom d'utilisateur depuis localStorage
-        const userStr = localStorage.getItem('user');
-        const userJson = userStr ? JSON.parse(userStr) : null;
-        const username = userJson?.username || userJson?.name || 'Utilisateur inconnu';
+        // Obtenir le nom d'utilisateur via le service
+        const username = this.currentUserService.getCurrentUsername();
         
         console.log('🔍 DEBUG - Nom d\'utilisateur récupéré:', username);
-        console.log('🔍 DEBUG - Utilisateur JSON:', userJson);
+        console.log('🔍 DEBUG - Info utilisateur:', this.currentUserService.getUserLogInfo());
         
         // Émettre un événement de notification avec le nom d'utilisateur
         const fileEvent: FileEvent = {
@@ -125,10 +130,8 @@ export class AjouterFichierService {
 
   // Méthode pour émettre un événement d'envoi de fichier
   emettreEnvoiFichier(fichier: any) {
-    // Obtenir le nom d'utilisateur depuis localStorage
-    const userStr = localStorage.getItem('user');
-    const userJson = userStr ? JSON.parse(userStr) : null;
-    const username = userJson?.username || userJson?.name || 'Utilisateur inconnu';
+    // Obtenir le nom d'utilisateur via le service
+    const username = this.currentUserService.getCurrentUsername();
     
     const fileEvent: FileEvent = {
       type: 'envoi',
@@ -142,10 +145,8 @@ export class AjouterFichierService {
 
   // Méthode pour émettre un événement de réception de fichier
   emettreReceptionFichier(fichier: any) {
-    // Obtenir le nom d'utilisateur depuis localStorage
-    const userStr = localStorage.getItem('user');
-    const userJson = userStr ? JSON.parse(userStr) : null;
-    const username = userJson?.username || userJson?.name || 'Utilisateur inconnu';
+    // Obtenir le nom d'utilisateur via le service
+    const username = this.currentUserService.getCurrentUsername();
     
     const fileEvent: FileEvent = {
       type: 'reception',

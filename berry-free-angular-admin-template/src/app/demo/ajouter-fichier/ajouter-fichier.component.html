@@ -33,6 +33,7 @@
               [(ngModel)]="typeFichier" 
               name="typeFichier" 
               required
+              (ngModelChange)="onTypeFichierChange()"
               #typeFichierCtrl="ngModel">
               <option value="">Sélectionner un type</option>
               <option *ngFor="let type of typesFichier" [value]="type.value">
@@ -165,16 +166,25 @@
               <i class="ti ti-receipt me-2"></i>
               Numéro de remise *
             </label>
-            <input 
-              type="text" 
-              class="form-control" 
-              id="numeroRemise" 
-              [(ngModel)]="numeroRemise" 
-              name="numeroRemise" 
-              placeholder="Ex: REM-2024-001"
-              required
-              pattern="^[A-Z]{2,4}-[0-9]{4}-[0-9]{3,6}$"
-              #numeroRemiseCtrl="ngModel">
+            <div class="input-group">
+              <input 
+                type="text" 
+                class="form-control" 
+                id="numeroRemise" 
+                [(ngModel)]="numeroRemise" 
+                name="numeroRemise" 
+                placeholder="Ex: REM-2024-001"
+                required
+                pattern="^[A-Z]{2,4}-[0-9]{4}-[0-9]{3,6}$"
+                #numeroRemiseCtrl="ngModel">
+              <button 
+                type="button" 
+                class="btn btn-outline-secondary"
+                (click)="genererNumeroRemise()"
+                title="Générer un nouveau numéro">
+                <i class="ti ti-refresh"></i>
+              </button>
+            </div>
             <div class="text-danger" *ngIf="numeroRemiseCtrl.invalid && (numeroRemiseCtrl.dirty || numeroRemiseCtrl.touched)">
               <span *ngIf="numeroRemiseCtrl.errors?.['required']">Le numéro de remise est requis.</span>
               <span *ngIf="numeroRemiseCtrl.errors?.['pattern']">Format: XXX-YYYY-NNNN (ex: REM-2024-001)</span>
@@ -224,25 +234,25 @@
             </div>
           </div>
 
-          <!-- Nomber -->
+          <!-- Nombre -->
           <div class="form-group">
-            <label for="nomber" class="form-label">
+            <label for="nombre" class="form-label">
               <i class="ti ti-hash me-2"></i>
-              Nomber *
+              Nombre *
             </label>
             <input 
               type="number" 
               class="form-control" 
-              id="nomber" 
+              id="nombre" 
               [(ngModel)]="nombre" 
-              name="nomber" 
+              name="nombre" 
               placeholder="Ex: 12345"
               required
               min="1"
-              #nomberCtrl="ngModel">
-            <div class="text-danger" *ngIf="nomberCtrl.invalid && (nomberCtrl.dirty || nomberCtrl.touched)">
-              <span *ngIf="nomberCtrl.errors?.['required']">Le nomber est requis.</span>
-              <span *ngIf="nomberCtrl.errors?.['min']">Le nomber doit être supérieur à 0.</span>
+              #nombreCtrl="ngModel">
+            <div class="text-danger" *ngIf="nombreCtrl.invalid && (nombreCtrl.dirty || nombreCtrl.touched)">
+              <span *ngIf="nombreCtrl.errors?.['required']">Le nombre est requis.</span>
+              <span *ngIf="nombreCtrl.errors?.['min']">Le nombre doit être supérieur à 0.</span>
             </div>
           </div>
 
