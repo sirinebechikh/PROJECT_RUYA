@@ -5,6 +5,7 @@ import { Subscription } from 'rxjs';
 import { trigger, state, style, transition, animate } from '@angular/animations';
 import { AjouterFichierService } from './ajouter-fichier.service';
 import { ApiService } from '../../services/api.service';
+import { CurrentUserService } from '../../services/current-user.service';
 
 @Component({
   selector: 'app-ajouter-fichier',
@@ -91,20 +92,13 @@ export class AjouterFichierComponent implements OnInit, OnDestroy {
 
   constructor(
     private ajouterFichierService: AjouterFichierService,
-    private apiService: ApiService
+    private apiService: ApiService,
+    private currentUserService: CurrentUserService
   ) {}
 
   ngOnInit() {
-    // Initialiser avec l'ID utilisateur depuis localStorage si disponible
-    const userStr = localStorage.getItem('user');
-    if (userStr) {
-      try {
-        const user = JSON.parse(userStr);
-        this.idUser = user.id || 1;
-      } catch (e) {
-        console.warn('Erreur lors du parsing de l\'utilisateur:', e);
-      }
-    }
+    // Initialiser avec l'ID utilisateur connecté
+    this.initializeCurrentUser();
 
     // S'abonner à l'état du modal
     this.subscription = this.ajouterFichierService.isModalOpen$.subscribe(
@@ -130,6 +124,52 @@ export class AjouterFichierComponent implements OnInit, OnDestroy {
 
   getCodesDisponibles() {
     return this.codesFichier[this.typeFichier] || [];
+  }
+
+  /**
+   * Initialise l'utilisateur courant
+   */
+  private initializeCurrentUser(): void {
+    try {
+      const userId = this.currentUserService.getCurrentUserId();
+      if (userId) {
+        this.idUser = userId;
+        console.log('👤 Utilisateur initialisé pour le formulaire:', {
+          id: this.idUser,
+          username: this.currentUserService.getCurrentUsername()
+        });
+      } else {
+        console.warn('⚠️ Aucun utilisateur connecté détecté');
+        this.idUser = 1; // Valeur par défaut temporaire
+      }
+    } catch (error) {
+      console.error('❌ Erreur lors de l\'initialisation de l\'utilisateur:', error);
+      this.idUser = 1; // Valeur par défaut en cas d'erreur
+    }
+  }
+
+  /**
+   * Vérifie que l'utilisateur est connecté
+   */
+  private validateUserConnection(): boolean {
+    if (!this.currentUserService.isLoggedIn()) {
+      alert('❌ Vous devez être connecté pour ajouter un fichier. Veuillez vous reconnecter.');
+      return false;
+    }
+
+    const userId = this.currentUserService.getCurrentUserId();
+    if (!userId || userId <= 0) {
+      alert('❌ Erreur d\'authentification. Veuillez vous reconnecter.');
+      return false;
+    }
+
+    // Mettre à jour l'ID utilisateur si nécessaire
+    if (this.idUser !== userId) {
+      this.idUser = userId;
+      console.log('👤 ID utilisateur mis à jour:', this.idUser);
+    }
+
+    return true;
   }
 
   /**
@@ -159,7 +199,12 @@ export class AjouterFichierComponent implements OnInit, OnDestroy {
   }
 
   onSubmit() {
-    // Validation côté client améliorée
+    // 1. Vérifier que l'utilisateur est connecté
+    if (!this.validateUserConnection()) {
+      return;
+    }
+
+    // 2. Validation côté client améliorée
     if (!this.nomFichier || this.nomFichier.trim().length < 5) {
       alert('Le nom du fichier doit contenir au moins 5 caractères.');
       return;
@@ -211,6 +256,13 @@ export class AjouterFichierComponent implements OnInit, OnDestroy {
     const nombreNum = parseInt(this.nombre);
     const validationBool = this.validation ? this.validation === 'true' : null;
 
+    // Obtenir les informations utilisateur via le service
+    const userForApi = this.currentUserService.getUserForApi();
+    if (!userForApi) {
+      alert('❌ Impossible de récupérer les informations utilisateur. Veuillez vous reconnecter.');
+      return;
+    }
+
     const fichierData = {
       nomFichier: this.nomFichier.trim(),
       typeFichier: this.typeFichier,
@@ -220,7 +272,7 @@ export class AjouterFichierComponent implements OnInit, OnDestroy {
       sens: this.sens,
       montant: montantNum,
       nombre: nombreNum,
-      user: { id: this.idUser },
+      user: userForApi,
       
       // NOUVEAUX CHAMPS
       numeroRemise: this.numeroRemise,
@@ -231,7 +283,10 @@ export class AjouterFichierComponent implements OnInit, OnDestroy {
       genereParEncaisse: false // Par défaut à false pour les saisies manuelles
     };
 
-    console.log('📤 Envoi des données avec nouveaux champs:', fichierData);
+    console.log('📤 Envoi des données avec utilisateur connecté:', {
+      ...fichierData,
+      userInfo: this.currentUserService.getUserLogInfo()
+    });
 
     // Utiliser le service API
     this.apiService.createFichier(fichierData).subscribe({
