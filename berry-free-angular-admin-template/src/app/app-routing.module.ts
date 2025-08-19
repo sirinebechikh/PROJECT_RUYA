@@ -1,9 +1,9 @@
 import { NgModule, inject } from '@angular/core';
 import { RouterModule, Routes, CanActivateFn, Router } from '@angular/router';
 
-// Layouts - Temporairement commentés pour résoudre les erreurs de compilation
-// import { AdminComponent } from './theme/layout/admin/admin.component';
-// import { GuestComponent } from './theme/layout/guest/guest.component';
+// Layouts
+import { AdminComponent } from './theme/layout/admin/admin.component';
+import { GuestComponent } from './theme/layout/guest/guest.component';
 
 // Guard utilisateur connecté
 export const userGuard: CanActivateFn = () => {

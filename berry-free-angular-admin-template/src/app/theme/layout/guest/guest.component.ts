@@ -4,8 +4,9 @@ import { RouterModule } from '@angular/router';
 
 @Component({
   selector: 'app-guest',
+  standalone: true,
   imports: [RouterModule],
   templateUrl: './guest.component.html',
-  styleUrls: ['./guest.component.scss']
+  styleUrl: './guest.component.scss'
 })
 export class GuestComponent {}
