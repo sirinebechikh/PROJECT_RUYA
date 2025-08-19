@@ -1,9 +1,9 @@
 import { NgModule, inject } from '@angular/core';
 import { RouterModule, Routes, CanActivateFn, Router } from '@angular/router';
 
-// Layouts
-import { AdminComponent } from './theme/layout/admin/admin.component';
-import { GuestComponent } from './theme/layout/guest/guest.component';
+// Layouts (use lazy loading for standalone components)
+// import { AdminComponent } from './theme/layout/admin/admin.component';
+// import { GuestComponent } from './theme/layout/guest/guest.component';
 
 // Guard utilisateur connecté
 export const userGuard: CanActivateFn = () => {
@@ -30,7 +30,7 @@ export const adminGuard: CanActivateFn = () => {
 const routes: Routes = [
   {
     path: '',
-    component: AdminComponent,
+    loadComponent: () => import('./theme/layout/admin/admin.component').then(m => m.AdminComponent),
     children: [
       { path: '', redirectTo: '/default', pathMatch: 'full' },
       {
@@ -104,7 +104,7 @@ const routes: Routes = [
   },
   {
     path: '',
-    component: GuestComponent,
+    loadComponent: () => import('./theme/layout/guest/guest.component').then(m => m.GuestComponent),
     children: [
       {
         path: 'guest',

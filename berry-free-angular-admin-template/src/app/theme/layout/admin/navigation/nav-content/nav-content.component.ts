@@ -32,7 +32,7 @@ export class NavContentComponent implements OnInit {
 
   // version
   title = 'Demo application for version numbering';
-  currentApplicationVersion = environment.appVersion;
+  currentApplicationVersion = (environment as any).appVersion ?? '';
 
   navigations!: NavigationItem[];
   windowWidth: number;
