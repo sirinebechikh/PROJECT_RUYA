@@ -1,10 +1,12 @@
-// Angular import
+ // Angular import
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { RouterModule } from '@angular/router';
 import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { Subscription } from 'rxjs';
+import { catchError, retry, delay } from 'rxjs/operators';
+import { of } from 'rxjs';
 
 // third party import
 import { SharedModule } from 'src/app/theme/shared/shared.module';
@@ -31,8 +33,6 @@ interface Fichier {
   };
 }
 
-
-
 @Component({
   selector: 'app-nav-right',
   imports: [RouterModule, SharedModule, FormsModule, CommonModule],
@@ -47,7 +47,7 @@ export class NavRightComponent implements OnInit, OnDestroy {
   filteredGlobalResults: Fichier[] = [];
   showSearchResults = false;
   allFichiers: Fichier[] = [];
-  subscription: Subscription;
+  subscription: Subscription = new Subscription();
   
   // Propriétés pour la popup de détails
   showFileDetailsPopup = false;
@@ -57,6 +57,11 @@ export class NavRightComponent implements OnInit, OnDestroy {
   notifications: Notification[] = [];
   unreadCount = 0;
   showNotifications = false;
+
+  // État de connexion pour l'interface utilisateur
+  isBackendConnected = true;
+  retryAttempts = 0;
+  maxRetryAttempts = 3;
 
   constructor(
     private router: Router,
@@ -71,58 +76,155 @@ export class NavRightComponent implements OnInit, OnDestroy {
     console.log('🔍 DEBUG - Utilisateur chargé:', this.userJson);
     console.log('🔍 DEBUG - Est ADMIN:', this.isAdminUser());
     
-    // Charger les notifications depuis le backend
+    // Charger les notifications depuis le backend avec gestion d'erreur
     this.chargerNotificationsBackend();
     
     // Charger aussi depuis le cache pour une meilleure persistance
     this.chargerNotificationsDepuisCache();
     
-    // Charger tous les fichiers pour la recherche globale
-    this.subscription = this.ajouterFichierService.fichiers$.subscribe(data => {
-      const anciensFichiers = this.allFichiers;
-      this.allFichiers = data || [];
-      
-      console.log('Fichiers chargés dans la recherche globale:', this.allFichiers.length);
-      console.log('Types de fichiers disponibles:', [...new Set(this.allFichiers.map(f => f.typeFichier))]);
-    });
+    // Charger tous les fichiers pour la recherche globale avec gestion d'erreur
+    this.subscription.add(
+      this.ajouterFichierService.fichiers$.subscribe({
+        next: (data) => {
+          this.allFichiers = data || [];
+          console.log('Fichiers chargés dans la recherche globale:', this.allFichiers.length);
+          console.log('Types de fichiers disponibles:', [...new Set(this.allFichiers.map(f => f.typeFichier))]);
+        },
+        error: (error) => {
+          console.error('❌ Erreur lors de la souscription aux fichiers:', error);
+          this.handleConnectionError();
+        }
+      })
+    );
     
     // Charger les fichiers depuis le service
     this.loadAllFichiers();
     
-    // Recharger les notifications toutes les 30 secondes pour rester synchronisé
+    // Recharger les notifications toutes les 30 secondes pour rester synchronisé (seulement si connecté)
     setInterval(() => {
-      if (this.isAdminUser()) {
+      if (this.isAdminUser() && this.isBackendConnected) {
         this.chargerNotificationsBackend();
       }
     }, 30000);
   }
 
+  /**
+   * Gère les erreurs de connexion au backend
+   */
+  private handleConnectionError(): void {
+    this.isBackendConnected = false;
+    console.warn('⚠️ Perte de connexion avec le backend - Mode hors ligne activé');
+    
+    // Charger les données depuis le cache local
+    this.chargerDonneesDepuisCache();
+    
+    // Programmer une tentative de reconnexion
+    this.scheduleReconnection();
+  }
+
+  /**
+   * Programme une tentative de reconnexion
+   */
+  private scheduleReconnection(): void {
+    if (this.retryAttempts < this.maxRetryAttempts) {
+      const delayTime = Math.pow(2, this.retryAttempts) * 5000; // Backoff exponentiel
+      
+      setTimeout(() => {
+        this.retryAttempts++;
+        console.log(`🔄 Tentative de reconnexion ${this.retryAttempts}/${this.maxRetryAttempts}`);
+        this.testConnection();
+      }, delayTime);
+    }
+  }
+
+  /**
+   * Teste la connexion au backend
+   */
+  private testConnection(): void {
+    this.ajouterFichierService.getAllFichiers()
+      .pipe(
+        catchError(error => {
+          console.error('❌ Test de connexion échoué:', error);
+          this.scheduleReconnection();
+          return of([]);
+        })
+      )
+      .subscribe({
+        next: (data) => {
+          if (data) {
+            console.log('✅ Connexion restaurée');
+            this.isBackendConnected = true;
+            this.retryAttempts = 0;
+            this.loadAllFichiers();
+            this.chargerNotificationsBackend();
+          }
+        }
+      });
+  }
+
+  /**
+   * Charge les données depuis le cache local
+   */
+  private chargerDonneesDepuisCache(): void {
+    // Charger les fichiers depuis le cache
+    const cachedFichiers = localStorage.getItem('fichiers_cache');
+    if (cachedFichiers) {
+      try {
+        this.allFichiers = JSON.parse(cachedFichiers);
+        console.log('📦 Fichiers chargés depuis le cache:', this.allFichiers.length);
+      } catch (error) {
+        console.error('❌ Erreur lors du chargement du cache des fichiers:', error);
+      }
+    }
+    
+    // Charger les notifications depuis le cache
+    this.chargerNotificationsDepuisCache();
+  }
+
+  /**
+   * Sauvegarde les fichiers dans le cache local
+   */
+  private sauvegarderFichiersCache(fichiers: Fichier[]): void {
+    try {
+      localStorage.setItem('fichiers_cache', JSON.stringify(fichiers));
+      localStorage.setItem('fichiers_timestamp', new Date().toISOString());
+    } catch (error) {
+      console.error('❌ Erreur lors de la sauvegarde du cache des fichiers:', error);
+    }
+  }
+
   // Méthode pour charger les notifications depuis le backend
-  private chargerNotificationsBackend() {
+  private chargerNotificationsBackend(): void {
+    if (!this.isBackendConnected) return;
+    
     console.log('🔍 DEBUG - Chargement des notifications depuis le backend...');
     
     // Charger TOUTES les notifications (lues et non lues)
-    this.notificationService.loadNotifications().subscribe({
-      next: (notifications) => {
-        this.notifications = notifications;
-        // Compter seulement les notifications non lues pour le badge
-        this.unreadCount = notifications.filter(n => !n.lu).length;
-        console.log('🔍 DEBUG - Toutes les notifications chargées depuis le backend:', notifications.length);
-        console.log('🔍 DEBUG - Notifications non lues:', this.unreadCount);
-        
-        // Sauvegarder les notifications dans localStorage pour la persistance
-        this.sauvegarderNotificationsLocales();
-      },
-      error: (error) => {
-        console.error('❌ Erreur lors du chargement des notifications:', error);
-        // En cas d'erreur, essayer de charger depuis le cache
-        this.chargerNotificationsDepuisCache();
-      }
-    });
+    this.notificationService.loadNotifications()
+      .pipe(
+        retry(2),
+        catchError(error => {
+          console.error('❌ Erreur lors du chargement des notifications:', error);
+          this.handleConnectionError();
+          return of([]);
+        })
+      )
+      .subscribe({
+        next: (notifications) => {
+          this.notifications = notifications;
+          // Compter seulement les notifications non lues pour le badge
+          this.unreadCount = notifications.filter(n => !n.lu).length;
+          console.log('🔍 DEBUG - Toutes les notifications chargées depuis le backend:', notifications.length);
+          console.log('🔍 DEBUG - Notifications non lues:', this.unreadCount);
+          
+          // Sauvegarder les notifications dans localStorage pour la persistance
+          this.sauvegarderNotificationsLocales();
+        }
+      });
   }
   
   // Méthode pour charger les notifications depuis le cache
-  private chargerNotificationsDepuisCache() {
+  private chargerNotificationsDepuisCache(): void {
     const cachedNotifications = localStorage.getItem('notifications_cache');
     const timestamp = localStorage.getItem('notifications_timestamp');
     
@@ -133,7 +235,7 @@ export class NavRightComponent implements OnInit, OnDestroy {
       if (cacheAge < maxAge) {
         try {
           this.notifications = JSON.parse(cachedNotifications);
-          this.unreadCount = this.notifications.length;
+          this.unreadCount = this.notifications.filter(n => !n.lu).length;
           console.log('🔍 DEBUG - Notifications chargées depuis le cache:', this.notifications.length);
         } catch (error) {
           console.error('❌ Erreur lors du chargement du cache:', error);
@@ -142,30 +244,45 @@ export class NavRightComponent implements OnInit, OnDestroy {
     }
   }
 
-  // Méthode pour charger tous les fichiers
-  loadAllFichiers() {
-    this.ajouterFichierService.getAllFichiers().subscribe({
-      next: (data) => {
-        console.log('Données reçues du service:', data?.length || 0);
-        if (data && data.length > 0) {
-          console.log('Exemples de fichiers:', data.slice(0, 3));
+  // Méthode pour charger tous les fichiers avec gestion d'erreur améliorée
+  loadAllFichiers(): void {
+    if (!this.isBackendConnected) {
+      this.chargerDonneesDepuisCache();
+      return;
+    }
+
+    this.ajouterFichierService.getAllFichiers()
+      .pipe(
+        retry(2),
+        catchError(error => {
+          console.error('❌ Erreur lors du chargement des fichiers:', error);
+          this.handleConnectionError();
+          return of([]);
+        })
+      )
+      .subscribe({
+        next: (data) => {
+          console.log('Données reçues du service:', data?.length || 0);
+          if (data && data.length > 0) {
+            console.log('Exemples de fichiers:', data.slice(0, 3));
+            // Sauvegarder dans le cache
+            this.sauvegarderFichiersCache(data);
+          }
+          this.ajouterFichierService.setFichiers(data);
+          this.isBackendConnected = true;
+          this.retryAttempts = 0;
         }
-        this.ajouterFichierService.setFichiers(data);
-      },
-      error: (err) => {
-        console.error('Erreur lors du chargement des fichiers', err);
-        // En cas d'erreur, essayer de recharger après un délai
-        setTimeout(() => this.loadAllFichiers(), 2000);
-      }
-    });
+      });
   }
 
-  ngOnDestroy() {
-    if (this.subscription) this.subscription.unsubscribe();
+  ngOnDestroy(): void {
+    if (this.subscription) {
+      this.subscription.unsubscribe();
+    }
   }
 
   // Méthode pour la recherche globale
-  onGlobalSearchChange() {
+  onGlobalSearchChange(): void {
     if (this.globalSearchTerm.trim()) {
       const searchLower = this.globalSearchTerm.toLowerCase();
       this.filteredGlobalResults = this.allFichiers.filter(fichier => {
@@ -189,40 +306,43 @@ export class NavRightComponent implements OnInit, OnDestroy {
       console.log('Tous les fichiers:', this.allFichiers.length);
       console.log('Résultats trouvés:', this.filteredGlobalResults.length);
       console.log('Types de fichiers trouvés:', [...new Set(this.filteredGlobalResults.map(f => f.typeFichier))]);
+      
+      this.showSearchResults = true;
     } else {
       this.filteredGlobalResults = [];
+      this.showSearchResults = false;
     }
   }
 
   // Méthode pour effacer la recherche
-  clearGlobalSearch() {
+  clearGlobalSearch(): void {
     this.globalSearchTerm = '';
     this.filteredGlobalResults = [];
     this.showSearchResults = false;
   }
 
   // Méthode pour gérer le blur de la recherche
-  onSearchBlur() {
+  onSearchBlur(): void {
     setTimeout(() => {
       this.showSearchResults = false;
     }, 200);
   }
 
   // Méthode pour afficher les détails du fichier
-  showFileDetails(fichier: Fichier) {
+  showFileDetails(fichier: Fichier): void {
     this.selectedFile = fichier;
     this.showFileDetailsPopup = true;
     this.showSearchResults = false;
   }
 
   // Méthode pour fermer la popup
-  closeFileDetailsPopup() {
+  closeFileDetailsPopup(): void {
     this.showFileDetailsPopup = false;
     this.selectedFile = null;
   }
 
   // Méthode pour naviguer vers le fichier sélectionné
-  navigateToFile(fichier: Fichier) {
+  navigateToFile(fichier: Fichier): void {
     let route = '';
     
     switch (fichier.typeFichier) {
@@ -268,17 +388,30 @@ export class NavRightComponent implements OnInit, OnDestroy {
     }
   }
 
-  onLogout() {
-    // Ici, ajouter la logique de déconnexion réelle si besoin
-    this.router.navigate(['/guest/login']);
+  onLogout(): void {
+    // Nettoyer les caches
+    localStorage.removeItem('notifications_cache');
+    localStorage.removeItem('notifications_timestamp');
+    localStorage.removeItem('fichiers_cache');
+    localStorage.removeItem('fichiers_timestamp');
+    localStorage.removeItem('highlightedFileId');
+    
+    // Déconnexion
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    this.router.navigate(['/guest/login']);
   }
 
-
-
   // Méthode pour marquer une notification comme lue
-  marquerCommeLue(notification: Notification) {
+  marquerCommeLue(notification: Notification): void {
+    if (!this.isBackendConnected) {
+      console.warn('⚠️ Mode hors ligne - marquage local uniquement');
+      notification.lu = true;
+      this.unreadCount = this.notifications.filter(n => !n.lu).length;
+      this.sauvegarderNotificationsLocales();
+      return;
+    }
+
     console.log('🔍 DEBUG - Marquer comme lue:', notification.id);
     
     // Mettre à jour immédiatement l'interface
@@ -288,29 +421,36 @@ export class NavRightComponent implements OnInit, OnDestroy {
     // Sauvegarder l'état local immédiatement
     this.sauvegarderNotificationsLocales();
     
-    this.notificationService.marquerCommeLue(notification.id).subscribe({
-      next: (updatedNotification) => {
-        console.log('🔍 DEBUG - Notification marquée comme lue:', updatedNotification);
-        // Mettre à jour la notification dans la liste locale
-        const index = this.notifications.findIndex(n => n.id === notification.id);
-        if (index !== -1) {
-          this.notifications[index] = updatedNotification;
+    this.notificationService.marquerCommeLue(notification.id)
+      .pipe(
+        catchError(error => {
+          console.error('❌ Erreur lors du marquage de la notification:', error);
+          // En cas d'erreur, remettre l'état précédent
+          notification.lu = false;
+          this.unreadCount = this.notifications.filter(n => !n.lu).length;
+          this.sauvegarderNotificationsLocales();
+          this.handleConnectionError();
+          return of(null);
+        })
+      )
+      .subscribe({
+        next: (updatedNotification) => {
+          if (updatedNotification) {
+            console.log('🔍 DEBUG - Notification marquée comme lue:', updatedNotification);
+            // Mettre à jour la notification dans la liste locale
+            const index = this.notifications.findIndex(n => n.id === notification.id);
+            if (index !== -1) {
+              this.notifications[index] = updatedNotification;
+            }
+            // Recharger depuis le backend pour synchronisation
+            this.chargerNotificationsBackend();
+          }
         }
-        // Recharger depuis le backend pour synchronisation
-        this.chargerNotificationsBackend();
-      },
-      error: (error) => {
-        console.error('❌ Erreur lors du marquage de la notification:', error);
-        // En cas d'erreur, remettre l'état précédent
-        notification.lu = false;
-        this.unreadCount = this.notifications.filter(n => !n.lu).length;
-        this.sauvegarderNotificationsLocales();
-      }
-    });
+      });
   }
   
   // Méthode pour naviguer vers le fichier depuis une notification
-  naviguerVersFichierDepuisNotification(notification: Notification) {
+  naviguerVersFichierDepuisNotification(notification: Notification): void {
     console.log('🔍 DEBUG - Méthode naviguerVersFichierDepuisNotification appelée');
     console.log('🔍 DEBUG - Notification:', notification);
     
@@ -387,13 +527,25 @@ export class NavRightComponent implements OnInit, OnDestroy {
   
   // Méthode pour sauvegarder les notifications localement
   private sauvegarderNotificationsLocales(): void {
-    localStorage.setItem('notifications_cache', JSON.stringify(this.notifications));
-    localStorage.setItem('notifications_timestamp', new Date().toISOString());
-    console.log('🔍 DEBUG - Notifications sauvegardées localement:', this.notifications.length);
+    try {
+      localStorage.setItem('notifications_cache', JSON.stringify(this.notifications));
+      localStorage.setItem('notifications_timestamp', new Date().toISOString());
+      console.log('🔍 DEBUG - Notifications sauvegardées localement:', this.notifications.length);
+    } catch (error) {
+      console.error('❌ Erreur lors de la sauvegarde des notifications:', error);
+    }
   }
 
   // Méthode pour marquer toutes les notifications comme lues
-  marquerToutesCommeLues() {
+  marquerToutesCommeLues(): void {
+    if (!this.isBackendConnected) {
+      console.warn('⚠️ Mode hors ligne - marquage local uniquement');
+      this.notifications.forEach(n => n.lu = true);
+      this.unreadCount = 0;
+      this.sauvegarderNotificationsLocales();
+      return;
+    }
+
     console.log('🔍 DEBUG - Marquer toutes comme lues');
     
     // Mettre à jour immédiatement l'interface
@@ -403,26 +555,31 @@ export class NavRightComponent implements OnInit, OnDestroy {
     // Sauvegarder l'état local immédiatement
     this.sauvegarderNotificationsLocales();
     
-    this.notificationService.marquerToutesCommeLues().subscribe({
-      next: () => {
-        console.log('🔍 DEBUG - Toutes les notifications marquées comme lues');
-        // Recharger depuis le backend pour synchronisation
-        this.chargerNotificationsBackend();
-      },
-      error: (error) => {
-        console.error('❌ Erreur lors du marquage de toutes les notifications:', error);
-        // En cas d'erreur, remettre l'état précédent
-        this.notifications.forEach(n => n.lu = false);
-        this.unreadCount = this.notifications.length;
-        this.sauvegarderNotificationsLocales();
-      }
-    });
+    this.notificationService.marquerToutesCommeLues()
+      .pipe(
+        catchError(error => {
+          console.error('❌ Erreur lors du marquage de toutes les notifications:', error);
+          // En cas d'erreur, remettre l'état précédent
+          this.notifications.forEach(n => n.lu = false);
+          this.unreadCount = this.notifications.length;
+          this.sauvegarderNotificationsLocales();
+          this.handleConnectionError();
+          return of(null);
+        })
+      )
+      .subscribe({
+        next: (result) => {
+          if (result !== null) {
+            console.log('🔍 DEBUG - Toutes les notifications marquées comme lues');
+            // Recharger depuis le backend pour synchronisation
+            this.chargerNotificationsBackend();
+          }
+        }
+      });
   }
 
-
-
   // Méthode pour basculer l'affichage des notifications
-  toggleNotifications() {
+  toggleNotifications(): void {
     this.showNotifications = !this.showNotifications;
   }
 
@@ -439,8 +596,6 @@ export class NavRightComponent implements OnInit, OnDestroy {
     if (hours < 24) return `${hours} h ago`;
     return `${days} j ago`;
   }
-
-  
 
   // Méthode pour obtenir le titre de la notification
   getNotificationTitle(type: string, fichier: any): string {
@@ -473,7 +628,7 @@ export class NavRightComponent implements OnInit, OnDestroy {
   }
 
   // Méthode pour animer la notification
-  animerNotification() {
+  animerNotification(): void {
     // Ajouter une classe CSS pour l'animation
     const badge = document.querySelector('.notification-badge');
     if (badge) {
@@ -489,7 +644,6 @@ export class NavRightComponent implements OnInit, OnDestroy {
     if (!this.userJson) return false;
     
     // Vérifier si l'utilisateur a le rôle ADMIN
-    // Vous pouvez adapter cette logique selon votre structure de données utilisateur
     return this.userJson.role === 'ADMIN' || 
            this.userJson.roles?.includes('ADMIN') || 
            this.userJson.username === 'admin' ||
@@ -502,4 +656,14 @@ export class NavRightComponent implements OnInit, OnDestroy {
     return this.userJson.username || this.userJson.name || 'Utilisateur inconnu';
   }
 
+  // Méthode pour forcer la reconnexion
+  forceReconnection(): void {
+    this.retryAttempts = 0;
+    this.testConnection();
+  }
+
+  // Méthode pour obtenir le statut de connexion
+  getConnectionStatus(): string {
+    return this.isBackendConnected ? 'Connecté' : 'Hors ligne';
+  }
 }

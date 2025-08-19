@@ -1,4 +1,3 @@
-// ====== CarthageRepository.java - Corrigé avec toutes les méthodes ======
 package tn.esprit.ruya.repositories;
 
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -86,9 +85,7 @@ public interface CarthageRepository extends JpaRepository<Carthago, Long> {
     @Query("SELECT COALESCE(SUM(c.montant), 0.0) FROM Carthago c WHERE c.createdAt BETWEEN :start AND :end AND c.aVerifier = :verifier")
     Double sumMontantByCreatedAtBetweenAndAVerifier(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end, @Param("verifier") Boolean verifier);
 
-    // === *** NOUVELLES MÉTHODES POUR DASHBOARD SERVICE *** ===
-
-    // Traité par CTR ET validé (statut)
+    // === MÉTHODES COMBINÉES POUR DASHBOARD ===
     @Query("SELECT COUNT(c) FROM Carthago c WHERE c.createdAt BETWEEN :start AND :end " +
             "AND c.traiteParCTR = :traite AND c.statutCheque = :statut")
     Long countByCreatedAtBetweenAndTraiteParCTRAndStatutCheque(
@@ -105,7 +102,6 @@ public interface CarthageRepository extends JpaRepository<Carthago, Long> {
             @Param("traite") Boolean traite,
             @Param("statut") String statut);
 
-    // Avant CTR + Nature fichier
     @Query("SELECT COUNT(c) FROM Carthago c WHERE c.createdAt BETWEEN :start AND :end " +
             "AND c.avantCTR = :avant AND c.natureFichier = :nature")
     Long countByCreatedAtBetweenAndAvantCTRAndNatureFichier(
@@ -122,24 +118,6 @@ public interface CarthageRepository extends JpaRepository<Carthago, Long> {
             @Param("avant") Boolean avant,
             @Param("nature") String nature);
 
-    // Nature fichier + Avant CTR
-    @Query("SELECT COUNT(c) FROM Carthago c WHERE c.createdAt BETWEEN :start AND :end " +
-            "AND c.natureFichier = :nature AND c.avantCTR = :avant")
-    Long countByCreatedAtBetweenAndNatureFichierAndAvantCTR(
-            @Param("start") LocalDateTime start,
-            @Param("end") LocalDateTime end,
-            @Param("nature") String nature,
-            @Param("avant") Boolean avant);
-
-    @Query("SELECT COALESCE(SUM(c.montant), 0.0) FROM Carthago c WHERE c.createdAt BETWEEN :start AND :end " +
-            "AND c.natureFichier = :nature AND c.avantCTR = :avant")
-    Double sumMontantByCreatedAtBetweenAndNatureFichierAndAvantCTR(
-            @Param("start") LocalDateTime start,
-            @Param("end") LocalDateTime end,
-            @Param("nature") String nature,
-            @Param("avant") Boolean avant);
-
-    // Fichier ENV + Après CTR
     @Query("SELECT COUNT(c) FROM Carthago c WHERE c.createdAt BETWEEN :start AND :end " +
             "AND c.fichierEnv = :env AND c.apresCTR = :apres")
     Long countByCreatedAtBetweenAndFichierEnvAndApresCTR(
@@ -154,15 +132,6 @@ public interface CarthageRepository extends JpaRepository<Carthago, Long> {
             @Param("start") LocalDateTime start,
             @Param("end") LocalDateTime end,
             @Param("env") Boolean env,
-            @Param("apres") Boolean apres);
-
-    // MÉTHODE ALTERNATIVE POUR COMPTER LES GROUPES DE REMISES
-    // Utilise l'ID ou un autre champ existant au lieu de numeroRemise
-    @Query("SELECT COUNT(c) FROM Carthago c " +
-            "WHERE c.createdAt BETWEEN :start AND :end AND c.apresCTR = :apres")
-    Long countDistinctRemisesByCreatedAtBetweenAndApresCTR(
-            @Param("start") LocalDateTime start,
-            @Param("end") LocalDateTime end,
             @Param("apres") Boolean apres);
 
     // === COMBINAISONS COMPLEXES EXISTANTES ===

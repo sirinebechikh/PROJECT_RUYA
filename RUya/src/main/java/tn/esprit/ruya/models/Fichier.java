@@ -58,15 +58,13 @@ public class Fichier {
 
     // === NOUVELLES VARIABLES POUR DASHBOARD ===
 
-    // Variables spécifiques aux remises
-    @Column(name = "STATUT_REMISE")
-    private String statutRemise; // CREE, VALIDE, TRAITE, REFUSE
+
 
     @Column(name = "ORIGINE_SAISIE")
     private String origineSaisie; // WEB, AGENCE, BATCH
 
-    @Column(name = "VALIDATION_BO")
-    private Boolean validationBO; // true/false pour validation back office
+    @Column(name = "VALIDATION")
+    private Boolean validation; // true/false pour validation back office
 
     @Column(name = "DATE_VALIDATION")
     private LocalDateTime dateValidation;
@@ -81,12 +79,8 @@ public class Fichier {
     @Column(name = "TYPE_ENCAISSEMENT")
     private String typeEncaissement; // IMMEDIAT, DIFFERE
 
-    // Variables pour client externe
-    @Column(name = "CLIENT_EXTERNE_ID")
-    private String clientExterneId;
+ 
 
-    @Column(name = "SESSION_ID")
-    private String sessionId; // pour lier à une session
 
     @PrePersist
     private void prePersist() {

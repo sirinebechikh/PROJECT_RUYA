@@ -1,4 +1,3 @@
-// ====== CtrRepository.java - Corrigé et complété ======
 package tn.esprit.ruya.repositories;
 
 import org.springframework.data.jpa.repository.JpaRepository;

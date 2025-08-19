@@ -7,9 +7,7 @@ import tn.esprit.ruya.repositories.CarthageRepository;
 import tn.esprit.ruya.repositories.FichierRepository;
 import tn.esprit.ruya.repositories.CtrRepository;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -25,47 +23,46 @@ public class DashboardService {
     @Autowired
     private CtrRepository ctrRepository;
 
-    public DashboardResponseDTO getDashboardData() {
-        LocalDate today = LocalDate.now();
-        LocalDateTime startOfDay = today.atStartOfDay();
-        LocalDateTime endOfDay = today.atTime(23, 59, 59);
+    public DashboardResponseDTO getDashboardDataCorrected() {
+        LocalDateTime today = LocalDateTime.now().toLocalDate().atStartOfDay();
+        LocalDateTime endOfDay = today.plusDays(1).minusSeconds(1);
 
-        return getDashboardDataForPeriod(startOfDay, endOfDay);
+        return getDashboardDataForPeriodCorrected(today, endOfDay);
     }
 
-    public DashboardResponseDTO getDashboardDataForPeriod(LocalDateTime startOfDay, LocalDateTime endOfDay) {
+    public DashboardResponseDTO getDashboardDataForPeriodCorrected(LocalDateTime start, LocalDateTime end) {
         DashboardResponseDTO response = new DashboardResponseDTO();
         List<CardDataDTO> cardData = new ArrayList<>();
 
-        // Construction des cartes avec calculs corrigés selon vos besoins
-        cardData.add(buildEncaisseValeurCardCorrected(startOfDay, endOfDay));
-        cardData.add(buildFichierGenererCardCorrected(startOfDay, endOfDay));
-        cardData.add(buildCarthagoCardCorrected(startOfDay, endOfDay));
-        cardData.add(buildCarthagoAvantCTRCardCorrected(startOfDay, endOfDay));
-        cardData.add(buildCTRCardCorrected(startOfDay, endOfDay));
-        cardData.add(buildActionsControlesCardCorrected(startOfDay, endOfDay));
+        // Cartes corrigées selon le flux métier réel
+        cardData.add(buildCreationFichiersCard(start, end));
+        cardData.add(buildValidationFichiersCard(start, end));
+        cardData.add(buildFluxFichiersCarthago(start, end));
+        cardData.add(buildTraitementCarthagoCard(start, end));
+        cardData.add(buildFluxCarthagoCTRCard(start, end));
+        cardData.add(buildEquilibrageGlobalCard(start, end));
 
         response.setCardData(cardData);
         return response;
     }
 
     /**
-     * ENCAISSE VALEUR - Affiche les fichiers créés et validés
+     * CRÉATION FICHIERS - Fichiers créés dans le système
      */
-    private CardDataDTO buildEncaisseValeurCardCorrected(LocalDateTime start, LocalDateTime end) {
+    private CardDataDTO buildCreationFichiersCard(LocalDateTime start, LocalDateTime end) {
         CardDataDTO card = new CardDataDTO();
-        card.setTitle("ENCAISSE VALEUR");
-        card.setIcon("fas fa-globe");
-        card.setType("success");
+        card.setTitle("CRÉATION FICHIERS");
+        card.setIcon("fas fa-file-plus");
+        card.setType("info");
 
         List<DataRowDTO> data = new ArrayList<>();
 
         try {
-            // Fichiers créés et validés dans la table FICHIERS
-            Long fichiersValides = fichierRepository.countByCreatedAtBetweenAndValidationBO(start, end, true);
-            Double montantFichiersValides = fichierRepository.sumMontantByCreatedAtBetweenAndValidationBO(start, end, true);
-            data.add(new DataRowDTO("Fichiers validés", safeIntValue(fichiersValides),
-                    formatMontant(montantFichiersValides), "success"));
+            // Total fichiers créés
+            Long totalFichiers = fichierRepository.countByCreatedAtBetween(start, end);
+            Double montantTotal = fichierRepository.sumMontantByCreatedAtBetween(start, end);
+            data.add(new DataRowDTO("Total fichiers créés", safeIntValue(totalFichiers),
+                    formatMontant(montantTotal), "info"));
 
             // Remises créées
             Long remisesCreees = fichierRepository.countByCreatedAtBetweenAndNatureFichier(start, end, "REMISE");
@@ -73,6 +70,9 @@ public class DashboardService {
             data.add(new DataRowDTO("Remises créées", safeIntValue(remisesCreees),
                     formatMontant(montantRemises), null));
 
+            // Par origine
+            Long remisesWeb = fichierRepository.countByCreatedAtBetweenAndOrigineSaisie(start, end, "WEB");
+            data.add(new DataRowDTO("Remises WEB", safeIntValue(remisesWeb), null, null));
 
         } catch (Exception e) {
             data.add(new DataRowDTO("Erreur", "Données indisponibles", null, "danger"));
@@ -83,34 +83,75 @@ public class DashboardService {
     }
 
     /**
-     * FICHIERS GENERER - Affiche les fichiers générés ET validés par encaisse
+     * VALIDATION FICHIERS - Fichiers validés par BO
      */
-    private CardDataDTO buildFichierGenererCardCorrected(LocalDateTime start, LocalDateTime end) {
+    private CardDataDTO buildValidationFichiersCard(LocalDateTime start, LocalDateTime end) {
         CardDataDTO card = new CardDataDTO();
-        card.setTitle("FICHIERS GENERER par Encaisse");
-        card.setIcon("fas fa-cogs");
+        card.setTitle("VALIDATION FICHIERS");
+        card.setIcon("fas fa-check-circle");
+        card.setType("success");
+
+        List<DataRowDTO> data = new ArrayList<>();
+
+        try {
+            // Fichiers validés
+            Long fichiersValides = fichierRepository.countByCreatedAtBetweenAndValidationBO(start, end, true);
+            Double montantValides = fichierRepository.sumMontantByCreatedAtBetweenAndValidationBO(start, end, true);
+            data.add(new DataRowDTO("Fichiers validés", safeIntValue(fichiersValides),
+                    formatMontant(montantValides), "success"));
+
+            // Fichiers en attente
+            Long fichiersAttente = fichierRepository.countByCreatedAtBetweenAndValidationBO(start, end, false);
+            data.add(new DataRowDTO("En attente validation", safeIntValue(fichiersAttente), null, "warning"));
+
+            // Taux de validation
+            Long totalFichiers = fichierRepository.countByCreatedAtBetween(start, end);
+            Double tauxValidation = totalFichiers > 0 ? (fichiersValides * 100.0) / totalFichiers : 0.0;
+            data.add(new DataRowDTO("Taux validation", String.format("%.1f%%", tauxValidation), null,
+                    tauxValidation > 90 ? "success" : "warning"));
+
+        } catch (Exception e) {
+            data.add(new DataRowDTO("Erreur", "Données indisponibles", null, "danger"));
+        }
+
+        card.setData(data);
+        return card;
+    }
+
+    /**
+     * FLUX FICHIERS → CARTHAGO - Vérification de la transmission
+     */
+    private CardDataDTO buildFluxFichiersCarthago(LocalDateTime start, LocalDateTime end) {
+        CardDataDTO card = new CardDataDTO();
+        card.setTitle("FLUX FICHIERS → CARTHAGO");
+        card.setIcon("fas fa-arrow-right");
         card.setType("default");
 
         List<DataRowDTO> data = new ArrayList<>();
 
         try {
-            // Remises générées et validées
-            Long remisesGenereesValides = fichierRepository.countByCreatedAtBetweenAndNatureFichierAndGenereParEncaisseAndValidationBO(
-                    start, end, "REMISE", true, true);
-            Double montantRemisesGenereesValides = fichierRepository.sumMontantByCreatedAtBetweenAndNatureFichierAndGenereParEncaisseAndValidationBO(
-                    start, end, "REMISE", true, true);
-            data.add(new DataRowDTO("Remises générées validées", safeIntValue(remisesGenereesValides),
-                    formatMontant(montantRemisesGenereesValides), "success"));
-            // Fichiers générés ET validés (les deux conditions)
-            Long fichiersGeneresetValides = fichierRepository.countByCreatedAtBetweenAndGenereParEncaisseAndValidationBO(
-                    start, end, true, true);
-            Double montantFichiersGeneresetValides = fichierRepository.sumMontantByCreatedAtBetweenAndGenereParEncaisseAndValidationBO(
-                    start, end, true, true);
-            data.add(new DataRowDTO("Fichiers générés et validés", safeIntValue(fichiersGeneresetValides),
-                    formatMontant(montantFichiersGeneresetValides), "success"));
+            // Fichiers validés (doivent être transmis)
+            Long fichiersValides = fichierRepository.countByCreatedAtBetweenAndValidationBO(start, end, true);
+            Double montantFichiersValides = fichierRepository.sumMontantByCreatedAtBetweenAndValidationBO(start, end, true);
 
+            // Éléments reçus dans Carthago
+            Long elementsRecus = carthagoRepository.countByCreatedAtBetweenAndSens(start, end, "ENTRANT");
+            Double montantRecus = carthagoRepository.sumMontantByCreatedAtBetweenAndSens(start, end, "ENTRANT");
 
+            data.add(new DataRowDTO("Fichiers validés (à transmettre)", safeIntValue(fichiersValides),
+                    formatMontant(montantFichiersValides), null));
 
+            data.add(new DataRowDTO("Éléments reçus Carthago", safeIntValue(elementsRecus),
+                    formatMontant(montantRecus), null));
+
+            // Vérification cohérence
+            Long ecartNombre = fichiersValides - elementsRecus;
+            Double ecartMontant = montantFichiersValides - montantRecus;
+
+            String statusCohérence = (Math.abs(ecartNombre) <= 1 && Math.abs(ecartMontant) < 1.0) ? "success" : "warning";
+            data.add(new DataRowDTO("Cohérence transmission",
+                    "Écart: " + ecartNombre + " fichiers",
+                    "Écart: " + formatMontant(ecartMontant), statusCohérence));
 
         } catch (Exception e) {
             data.add(new DataRowDTO("Erreur", "Données indisponibles", null, "danger"));
@@ -121,36 +162,41 @@ public class DashboardService {
     }
 
     /**
-     * CARTHAGO - Affiche les fichiers générés ET validés dans Carthago
+     * TRAITEMENT CARTHAGO - Éléments traités par Carthago
      */
-    private CardDataDTO buildCarthagoCardCorrected(LocalDateTime start, LocalDateTime end) {
+    private CardDataDTO buildTraitementCarthagoCard(LocalDateTime start, LocalDateTime end) {
         CardDataDTO card = new CardDataDTO();
-        card.setTitle("Fichiers Carthago");
+        card.setTitle("TRAITEMENT CARTHAGO");
         card.setIcon("fas fa-server");
         card.setType("default");
 
         List<DataRowDTO> data = new ArrayList<>();
 
         try {
-            // Fichiers générés et validés dans Carthago (statut TRAITE = validé)
-            Long fichiersCarthagoValides = carthagoRepository.countByCreatedAtBetweenAndStatutCheque(start, end, "TRAITE");
-            Double montantCarthagoValides = carthagoRepository.sumMontantByCreatedAtBetweenAndStatutCheque(start, end, "TRAITE");
-            data.add(new DataRowDTO("Fichiers générés et validés", safeIntValue(fichiersCarthagoValides),
-                    formatMontant(montantCarthagoValides), "success"));
+            // Total éléments Carthago
+            Long totalCarthago = carthagoRepository.countByCreatedAtBetween(start, end);
+            Double montantTotal = carthagoRepository.sumMontantByCreatedAtBetween(start, end);
 
-            // Fichiers consommés par Carthago (tous entrants)
-            Long fichiersCarthago = carthagoRepository.countByCreatedAtBetweenAndSens(start, end, "ENTRANT");
-            Double montantCarthago = carthagoRepository.sumMontantByCreatedAtBetweenAndSens(start, end, "ENTRANT");
-            data.add(new DataRowDTO("Total consommés Carthago", safeIntValue(fichiersCarthago),
-                    formatMontant(montantCarthago), null));
+            // Éléments traités
+            Long elementsTraites = carthagoRepository.countByCreatedAtBetweenAndStatutCheque(start, end, "TRAITE");
+            Double montantTraites = carthagoRepository.sumMontantByCreatedAtBetweenAndStatutCheque(start, end, "TRAITE");
 
-            // Générés vers CTR et validés
-            Long generesCTRValides = carthagoRepository.countByCreatedAtBetweenAndTraiteParCTRAndStatutCheque(
-                    start, end, true, "TRAITE");
-            Double montantGeneresCTRValides = carthagoRepository.sumMontantByCreatedAtBetweenAndTraiteParCTRAndStatutCheque(
-                    start, end, true, "TRAITE");
-            data.add(new DataRowDTO("Générés vers CTR validés", safeIntValue(generesCTRValides),
-                    formatMontant(montantGeneresCTRValides), "success"));
+            // Éléments à vérifier
+            Long aVerifier = carthagoRepository.countByCreatedAtBetweenAndAVerifier(start, end, true);
+
+            data.add(new DataRowDTO("Total Carthago", safeIntValue(totalCarthago),
+                    formatMontant(montantTotal), "info"));
+
+            data.add(new DataRowDTO("Éléments traités", safeIntValue(elementsTraites),
+                    formatMontant(montantTraites), "success"));
+
+            data.add(new DataRowDTO("À vérifier", safeIntValue(aVerifier), null,
+                    aVerifier > 10 ? "warning" : "info"));
+
+            // Taux de traitement
+            Double tauxTraitement = totalCarthago > 0 ? (elementsTraites * 100.0) / totalCarthago : 0.0;
+            data.add(new DataRowDTO("Taux traitement", String.format("%.1f%%", tauxTraitement), null,
+                    tauxTraitement > 90 ? "success" : "warning"));
 
         } catch (Exception e) {
             data.add(new DataRowDTO("Erreur", "Données indisponibles", null, "danger"));
@@ -161,35 +207,82 @@ public class DashboardService {
     }
 
     /**
-     * CARTHAGO AVANT CTR - Affiche les données avant traitement CTR
+     * FLUX CARTHAGO → CTR - Vérification transmission vers CTR
      */
-    private CardDataDTO buildCarthagoAvantCTRCardCorrected(LocalDateTime start, LocalDateTime end) {
+    private CardDataDTO buildFluxCarthagoCTRCard(LocalDateTime start, LocalDateTime end) {
         CardDataDTO card = new CardDataDTO();
-        card.setTitle("Carthago avant CTR");
+        card.setTitle("FLUX CARTHAGO → CTR");
         card.setIcon("fas fa-exchange-alt");
+        card.setType("default");
+
+        List<DataRowDTO> data = new ArrayList<>();
+
+        try {
+            // Carthago traités (doivent être envoyés vers CTR)
+            Long carthagoTraites = carthagoRepository.countByCreatedAtBetweenAndStatutCheque(start, end, "TRAITE");
+            Double montantCarthagoTraites = carthagoRepository.sumMontantByCreatedAtBetweenAndStatutCheque(start, end, "TRAITE");
+
+            // CTR reçus
+            Long ctrRecus = ctrRepository.countByCreatedAtBetween(start, end);
+            Double montantCTR = ctrRepository.sumMontantByCreatedAtBetween(start, end);
+
+            data.add(new DataRowDTO("Carthago traités (à envoyer)", safeIntValue(carthagoTraites),
+                    formatMontant(montantCarthagoTraites), null));
+
+            data.add(new DataRowDTO("CTR reçus", safeIntValue(ctrRecus),
+                    formatMontant(montantCTR), null));
+
+            // Vérification équilibrage
+            boolean equilibreNombre = carthagoTraites.equals(ctrRecus);
+            boolean equilibreMontant = Math.abs(montantCarthagoTraites - montantCTR) < 1.0;
+
+            String statusEquilibrage = (equilibreNombre && equilibreMontant) ? "success" : "warning";
+            String messageEquilibrage = equilibreNombre && equilibreMontant ? "Équilibré" : "Déséquilibré";
+
+            data.add(new DataRowDTO("État équilibrage", messageEquilibrage, null, statusEquilibrage));
+
+        } catch (Exception e) {
+            data.add(new DataRowDTO("Erreur", "Données indisponibles", null, "danger"));
+        }
+
+        card.setData(data);
+        return card;
+    }
+
+    /**
+     * ÉQUILIBRAGE GLOBAL - Vue d'ensemble des flux
+     */
+    private CardDataDTO buildEquilibrageGlobalCard(LocalDateTime start, LocalDateTime end) {
+        CardDataDTO card = new CardDataDTO();
+        card.setTitle("ÉQUILIBRAGE GLOBAL");
+        card.setIcon("fas fa-balance-scale");
         card.setType("warning");
 
         List<DataRowDTO> data = new ArrayList<>();
 
         try {
-            // Remises avant CTR
-            Long remisesAvantCTR = carthagoRepository.countByCreatedAtBetweenAndAvantCTRAndNatureFichier(
-                    start, end, true, "REMISE");
-            Double montantRemisesAvantCTR = carthagoRepository.sumMontantByCreatedAtBetweenAndAvantCTRAndNatureFichier(
-                    start, end, true, "REMISE");
-            data.add(new DataRowDTO("Remises avant CTR", safeIntValue(remisesAvantCTR),
-                    formatMontant(montantRemisesAvantCTR), null));
+            ResultatEquilibrageDTO equilibrage = calculerEquilibrageGlobalCorrect(start, end);
 
-            // Chèques fichier avant CTR
-            Long chequesFichierAvantCTR = carthagoRepository.countByCreatedAtBetweenAndNatureFichierAndAvantCTR(
-                    start, end, "FICHIER", true);
-            Double montantChequesFichier = carthagoRepository.sumMontantByCreatedAtBetweenAndNatureFichierAndAvantCTR(
-                    start, end, "FICHIER", true);
-            data.add(new DataRowDTO("Chèques fichier avant CTR", safeIntValue(chequesFichierAvantCTR),
-                    formatMontant(montantChequesFichier), null));
+            // Flux Fichiers → Carthago
+            data.add(new DataRowDTO("Flux Fichiers → Carthago",
+                    equilibrage.isCoherenceFichierCarthago() ? "Cohérent" : "Incohérent",
+                    "Écart: " + equilibrage.getEcartFichierCarthago(),
+                    equilibrage.isCoherenceFichierCarthago() ? "success" : "danger"));
+
+            // Flux Carthago → CTR
+            data.add(new DataRowDTO("Flux Carthago → CTR",
+                    equilibrage.isCoherenceCarthagoCTR() ? "Cohérent" : "Incohérent",
+                    "Écart: " + equilibrage.getEcartCarthagoCTR(),
+                    equilibrage.isCoherenceCarthagoCTR() ? "success" : "danger"));
+
+            // État global
+            boolean equilibreGlobal = equilibrage.isCoherenceFichierCarthago() && equilibrage.isCoherenceCarthagoCTR();
+            data.add(new DataRowDTO("État global",
+                    equilibreGlobal ? "Système équilibré" : "Déséquilibres détectés",
+                    null, equilibreGlobal ? "success" : "danger"));
 
         } catch (Exception e) {
-            data.add(new DataRowDTO("Erreur", "Données indisponibles", null, "danger"));
+            data.add(new DataRowDTO("Erreur", "Impossible de calculer l'équilibrage", null, "danger"));
         }
 
         card.setData(data);
@@ -197,315 +290,59 @@ public class DashboardService {
     }
 
     /**
-     * CTR - Affiche chèques et remises séparément (car chaque fichier = une remise)
+     * CALCUL D'ÉQUILIBRAGE GLOBAL CORRIGÉ
      */
-    private CardDataDTO buildCTRCardCorrected(LocalDateTime start, LocalDateTime end) {
-        CardDataDTO card = new CardDataDTO();
-        card.setTitle("CTR");
-        card.setIcon("fas fa-copy");
-        card.setType("default");
-
-        List<DataRowDTO> data = new ArrayList<>();
+    public ResultatEquilibrageDTO calculerEquilibrageGlobalCorrect(LocalDateTime start, LocalDateTime end) {
+        ResultatEquilibrageDTO resultat = new ResultatEquilibrageDTO();
 
         try {
+            // Données Fichiers
+            Long fichiersValides = fichierRepository.countByCreatedAtBetweenAndValidationBO(start, end, true);
+            Double montantFichiers = fichierRepository.sumMontantByCreatedAtBetweenAndValidationBO(start, end, true);
 
-            // Remises CTR (car chaque fichier = une remise)
-            // Comptage des fichiers uniques qui correspondent à des remises
-            Long remisesCTR = fichierRepository.countByCreatedAtBetweenAndNatureFichierAndCodeValeur(
-                    start, end, "REMISE", "APRES_CTR");
-            Double montantRemisesCTR = fichierRepository.sumMontantByCreatedAtBetweenAndNatureFichierAndCodeValeur(
-                    start, end, "REMISE", "APRES_CTR");
-            data.add(new DataRowDTO("Remises traitées", safeIntValue(remisesCTR),
-                    formatMontant(montantRemisesCTR), null));
-            // Chèques CTR (éléments individuels)
-            Long chequesCTR = carthagoRepository.countByCreatedAtBetweenAndTraiteParCTR(start, end, true);
-            Double montantChequesCTR = carthagoRepository.sumMontantByCreatedAtBetweenAndTraiteParCTR(start, end, true);
-            data.add(new DataRowDTO("Chèques", safeIntValue(chequesCTR),
-                    formatMontant(montantChequesCTR), null));
+            // Données Carthago
+            Long carthagoRecus = carthagoRepository.countByCreatedAtBetweenAndSens(start, end, "ENTRANT");
+            Long carthagoTraites = carthagoRepository.countByCreatedAtBetweenAndStatutCheque(start, end, "TRAITE");
+            Double montantCarthagoTraites = carthagoRepository.sumMontantByCreatedAtBetweenAndStatutCheque(start, end, "TRAITE");
 
-            // Ensemble de fichiers formant des remises (regroupement)
-            Long ensembleFichiersRemises = carthagoRepository.countDistinctRemisesByCreatedAtBetweenAndApresCTR(
-                    start, end, true);
-            data.add(new DataRowDTO("Ensembles fichiers/remises", safeIntValue(ensembleFichiersRemises),
-                    null, null));
-
-            // Fichiers ENV CTR
-            Long fichiersEnvCTR = carthagoRepository.countByCreatedAtBetweenAndFichierEnvAndApresCTR(
-                    start, end, true, true);
-            Double montantFichiersEnv = carthagoRepository.sumMontantByCreatedAtBetweenAndFichierEnvAndApresCTR(
-                    start, end, true, true);
-            data.add(new DataRowDTO("Chèques fichier ENV", safeIntValue(fichiersEnvCTR),
-                    formatMontant(montantFichiersEnv), null));
-
-        } catch (Exception e) {
-            data.add(new DataRowDTO("Erreur", "Données indisponibles", null, "danger"));
-        }
-
-        card.setData(data);
-        return card;
-    }
-
-    /**
-     * ACTIONS ET CONTROLES - Équilibrage avec somme Fichiers + Carthago
-     */
-    private CardDataDTO buildActionsControlesCardCorrected(LocalDateTime start, LocalDateTime end) {
-        CardDataDTO card = new CardDataDTO();
-        card.setTitle("Actions et Contrôles");
-        card.setIcon("fas fa-tools");
-        card.setType("default");
-
-        List<DataRowDTO> data = new ArrayList<>();
-
-        try {
-            // Calcul d'équilibrage : (Fichiers + Carthago) vs CTR
-            EquilibrageResultDTO equilibrage = calculerEquilibrageCorrect(start, end);
-
-            Long sommeFichiersCarthago = equilibrage.getTotalCarFich();
-            Long totalCTR = equilibrage.getNombreCTR();
-            Long difference = sommeFichiersCarthago - totalCTR;
-
-            // Affichage du résultat d'équilibrage
-            String statusEquilibrage;
-            String valueEquilibrage;
-
-            if (difference == 0) {
-                statusEquilibrage = "success";
-                valueEquilibrage = "Équilibré (" + sommeFichiersCarthago + " = " + totalCTR + ")";
-            } else {
-                statusEquilibrage = "warning";
-                valueEquilibrage = "Déséquilibré (" + sommeFichiersCarthago + " vs " + totalCTR + ")";
-            }
-
-            data.add(new DataRowDTO("Équilibrage Fichiers+Carthago/CTR", valueEquilibrage,
-                    "Différence: " + difference, statusEquilibrage));
-
-            // Détail de la somme
-            data.add(new DataRowDTO("Fichiers générés", safeIntValue(equilibrage.getNombreFichiers()),
-                    formatMontant(equilibrage.getMontantFichiers()), null));
-
-            data.add(new DataRowDTO("Carthago traités", safeIntValue(equilibrage.getNombreCarthago()),
-                    formatMontant(equilibrage.getMontantCarthago()), null));
-
-            data.add(new DataRowDTO("Total CTR", safeIntValue(equilibrage.getNombreCTR()),
-                    formatMontant(equilibrage.getMontantCTR()), null));
-
-            // Fichiers non parvenus dans Carthago
-            if (difference > 0) {
-                data.add(new DataRowDTO("Fichiers non dans Carthago", safeIntValue(difference),
-                        null, "warning"));
-            } else if (difference < 0) {
-                data.add(new DataRowDTO("Éléments Carthago en excès", safeIntValue(Math.abs(difference)),
-                        null, "warning"));
-            }
-
-        } catch (Exception e) {
-            data.add(new DataRowDTO("Erreur", "Données indisponibles", null, "danger"));
-        }
-
-        card.setData(data);
-        return card;
-    }
-
-    /**
-     * CALCUL D'ÉQUILIBRAGE CORRIGÉ - Somme Fichiers + Carthago vs CTR
-     */
-    public EquilibrageResultDTO calculerEquilibrageCorrect(LocalDateTime start, LocalDateTime end) {
-        try {
-            // Données Fichiers (générés et validés)
-            Long nombreFichiers = fichierRepository.countByCreatedAtBetweenAndGenereParEncaisseAndValidationBO(
-                    start, end, true, true);
-            Double montantFichiers = fichierRepository.sumMontantByCreatedAtBetweenAndGenereParEncaisseAndValidationBO(
-                    start, end, true, true);
-
-            // Données Carthago (traités = validés)
-            Long nombreCarthago = carthagoRepository.countByCreatedAtBetweenAndStatutCheque(start, end, "TRAITE");
-            Double montantCarthago = carthagoRepository.sumMontantByCreatedAtBetweenAndStatutCheque(start, end, "TRAITE");
-
-            // Données CTR totales
-            Long nombreCTR = ctrRepository.countByCreatedAtBetween(start, end);
+            // Données CTR
+            Long ctrRecus = ctrRepository.countByCreatedAtBetween(start, end);
             Double montantCTR = ctrRepository.sumMontantByCreatedAtBetween(start, end);
 
-            // Gestion des valeurs null
-            nombreFichiers = nombreFichiers != null ? nombreFichiers : 0L;
-            montantFichiers = montantFichiers != null ? montantFichiers : 0.0;
-            nombreCarthago = nombreCarthago != null ? nombreCarthago : 0L;
-            montantCarthago = montantCarthago != null ? montantCarthago : 0.0;
-            nombreCTR = nombreCTR != null ? nombreCTR : 0L;
-            montantCTR = montantCTR != null ? montantCTR : 0.0;
+            // Calculs de cohérence
+            resultat.setNombreFichiersValides(fichiersValides);
+            resultat.setNombreCarthagoRecus(carthagoRecus);
+            resultat.setNombreCarthagoTraites(carthagoTraites);
+            resultat.setNombreCTRRecus(ctrRecus);
 
-            // Calculs d'équilibrage: (Fichiers + Carthago) = CTR
-            Long totalElements = nombreFichiers + nombreCarthago;
-            Double totalMontant = montantFichiers + montantCarthago;
+            resultat.setMontantFichiers(montantFichiers);
+            resultat.setMontantCarthagoTraites(montantCarthagoTraites);
+            resultat.setMontantCTR(montantCTR);
 
-            boolean equilibreNombre = totalElements.equals(nombreCTR);
-            boolean equilibreMontant = Math.abs(totalMontant - montantCTR) < 0.01;
+            // Cohérence Fichiers → Carthago (tolérance de ±1)
+            resultat.setEcartFichierCarthago(fichiersValides - carthagoRecus);
+            resultat.setCoherenceFichierCarthago(Math.abs(resultat.getEcartFichierCarthago()) <= 1);
 
-            Double difference = totalMontant - montantCTR;
+            // Cohérence Carthago → CTR
+            resultat.setEcartCarthagoCTR(carthagoTraites - ctrRecus);
+            resultat.setCoherenceCarthagoCTR(Math.abs(resultat.getEcartCarthagoCTR()) <= 1);
 
-            return new EquilibrageResultDTO(
-                    nombreCarthago, montantCarthago,
-                    nombreFichiers, montantFichiers,
-                    nombreCTR, montantCTR,
-                    equilibreNombre, equilibreMontant,
-                    difference
-            );
+            // Cohérence montants (tolérance de 1 DT)
+            resultat.setEcartMontantGlobal(montantFichiers - montantCTR);
+            resultat.setCoherenceMontants(Math.abs(resultat.getEcartMontantGlobal()) < 1.0);
 
         } catch (Exception e) {
-            // Retourner un équilibrage par défaut en cas d'erreur
-            return new EquilibrageResultDTO(0L, 0.0, 0L, 0.0, 0L, 0.0, false, false, 0.0);
+            // Valeurs par défaut en cas d'erreur
+            resultat = new ResultatEquilibrageDTO();
         }
+
+        return resultat;
     }
 
     // === MÉTHODES UTILITAIRES ===
 
-    public SyntheseDTO genererSynthese(LocalDateTime start, LocalDateTime end) {
-        SyntheseDTO synthese = new SyntheseDTO();
-
-        try {
-            // Statistiques Fichiers
-            synthese.setTotalRemises(fichierRepository.countByCreatedAtBetween(start, end));
-            synthese.setRemisesValidees(fichierRepository.countByCreatedAtBetweenAndValidationBO(start, end, true));
-            synthese.setRemisesWeb(fichierRepository.countByCreatedAtBetweenAndOrigineSaisie(start, end, "WEB"));
-            synthese.setRemisesEnCours(fichierRepository.countByCreatedAtBetweenAndStatutRemise(start, end, "EN_COURS"));
-
-            // Statistiques Carthago
-            synthese.setTotalCheques(carthagoRepository.countByCreatedAtBetween(start, end));
-            synthese.setChequesTraites(carthagoRepository.countByCreatedAtBetweenAndStatutCheque(start, end, "TRAITE"));
-            synthese.setChequesAVerifier(carthagoRepository.countByCreatedAtBetweenAndAVerifier(start, end, true));
-            synthese.setChequesElectroniques(carthagoRepository.countByCreatedAtBetweenAndTypeFichier(start, end, "ELECTRONIQUE"));
-            synthese.setChequesManuels(carthagoRepository.countByCreatedAtBetweenAndTypeFichier(start, end, "MANUEL"));
-
-            // Statistiques CTR
-            synthese.setTotalCTR(ctrRepository.countByCreatedAtBetween(start, end));
-            synthese.setCtrEquilibres(ctrRepository.countByCreatedAtBetweenAndEquilibre(start, end, true));
-            synthese.setRemisesDouble(ctrRepository.countByCreatedAtBetweenAndRemiseDouble(start, end, true));
-            synthese.setRemisesNonParvenues(ctrRepository.countByCreatedAtBetweenAndRemiseNonParvenue(start, end, true));
-
-            // Montants
-            synthese.setMontantTotalRemises(fichierRepository.sumMontantByCreatedAtBetween(start, end));
-            synthese.setMontantTotalCheques(carthagoRepository.sumMontantByCreatedAtBetween(start, end));
-            synthese.setMontantTotalCTR(ctrRepository.sumMontantByCreatedAtBetween(start, end));
-
-            // Calculs de taux
-            synthese.calculerTaux();
-
-        } catch (Exception e) {
-            // Initialiser avec des valeurs par défaut en cas d'erreur
-            synthese.setTotalRemises(0L);
-            synthese.setTotalCheques(0L);
-            synthese.setTotalCTR(0L);
-        }
-
-        return synthese;
-    }
-
-    public List<AnomalieDTO> detecterAnomalies(LocalDateTime start, LocalDateTime end) {
-        List<AnomalieDTO> anomalies = new ArrayList<>();
-
-        try {
-            // Vérification équilibrage corrigé
-            EquilibrageResultDTO equilibrage = calculerEquilibrageCorrect(start, end);
-            if (!equilibrage.isEquilibreNombre()) {
-                Long difference = equilibrage.getTotalCarFich() - equilibrage.getNombreCTR();
-                anomalies.add(new AnomalieDTO("EQUILIBRAGE_NOMBRE",
-                        "Déséquilibre détecté: " + equilibrage.getTotalCarFich() + " vs " + equilibrage.getNombreCTR() +
-                                " (Différence: " + difference + ")",
-                        "CRITIQUE"));
-            }
-            if (!equilibrage.isEquilibreMontant()) {
-                anomalies.add(new AnomalieDTO("EQUILIBRAGE_MONTANT",
-                        "Déséquilibre montant: " + formatMontant(equilibrage.getDifference()),
-                        "CRITIQUE"));
-            }
-
-            // Vérification fichiers non parvenus dans Carthago
-            Long fichiersGeneres = fichierRepository.countByCreatedAtBetweenAndGenereParEncaisse(start, end, true);
-            Long fichiersReçus = carthagoRepository.countByCreatedAtBetweenAndSens(start, end, "ENTRANT");
-            Long fichiersNonParvenus = fichiersGeneres - fichiersReçus;
-
-            if (fichiersNonParvenus > 0) {
-                anomalies.add(new AnomalieDTO("FICHIERS_NON_PARVENUES",
-                        fichiersNonParvenus + " fichiers générés non parvenus à Carthago", "ALERTE"));
-            }
-
-            // Vérification chèques à vérifier
-            Long chequesAVerifier = carthagoRepository.countByCreatedAtBetweenAndAVerifier(start, end, true);
-            if (chequesAVerifier > 10) {
-                anomalies.add(new AnomalieDTO("CHEQUES_A_VERIFIER",
-                        chequesAVerifier + " chèques nécessitent une vérification", "ATTENTION"));
-            }
-
-        } catch (Exception e) {
-            anomalies.add(new AnomalieDTO("SYSTEM_ERROR",
-                    "Erreur lors de la détection d'anomalies: " + e.getMessage(), "CRITIQUE"));
-        }
-
-        return anomalies;
-    }
-
-    public PerformanceDTO calculerPerformance(LocalDateTime start, LocalDateTime end) {
-        PerformanceDTO performance = new PerformanceDTO();
-
-        try {
-            performance.setPeriodeDebut(start);
-            performance.setPeriodeFin(end);
-
-            // Métriques de volume
-            performance.setVolumeRemisesTraitees(fichierRepository.countByCreatedAtBetweenAndValidationBO(start, end, true));
-            performance.setVolumeChequesTraites(carthagoRepository.countByCreatedAtBetweenAndStatutCheque(start, end, "TRAITE"));
-            performance.setVolumeCTRTraites(ctrRepository.countByCreatedAtBetweenAndEquilibre(start, end, true));
-
-            // Métriques de qualité
-            Long totalCheques = carthagoRepository.countByCreatedAtBetween(start, end);
-            Long chequesAVerifier = carthagoRepository.countByCreatedAtBetweenAndAVerifier(start, end, true);
-
-            Double tauxErreur = totalCheques > 0 ? (chequesAVerifier * 100.0) / totalCheques : 0.0;
-            performance.setTauxErreurGlobal(tauxErreur);
-
-            // Métriques métier
-            performance.setMontantTotalTraite(carthagoRepository.sumMontantByCreatedAtBetween(start, end));
-
-            Long totalRemises = fichierRepository.countByCreatedAtBetween(start, end);
-            Double montantRemises = fichierRepository.sumMontantByCreatedAtBetween(start, end);
-            performance.setMontantMoyenParRemise(totalRemises > 0 ? montantRemises / totalRemises : 0.0);
-
-            Double montantCheques = carthagoRepository.sumMontantByCreatedAtBetween(start, end);
-            performance.setMontantMoyenParCheque(totalCheques > 0 ? montantCheques / totalCheques : 0.0);
-
-            // Calcul des throughputs (approximatif)
-            long heuresDifference = java.time.Duration.between(start, end).toHours();
-            if (heuresDifference > 0) {
-                performance.setThroughputRemisesParHeure(totalRemises.doubleValue() / heuresDifference);
-                performance.setThroughputChequesParHeure(totalCheques.doubleValue() / heuresDifference);
-            }
-
-            // Indicateurs par défaut
-            performance.setTauxDisponibiliteSysteme(99.5);
-            performance.setTempsTraitementMoyenRemise(15.0);
-            performance.setTempsTraitementMoyenCheque(5.0);
-
-        } catch (Exception e) {
-            // Initialiser avec des valeurs par défaut
-            performance.setTauxErreurGlobal(0.0);
-            performance.setVolumeRemisesTraitees(0L);
-            performance.setVolumeChequesTraites(0L);
-        }
-
-        return performance;
-    }
-
-    /**
-     * Helper method to safely convert Long to int, handling null values
-     */
     private int safeIntValue(Long value) {
         return value != null ? value.intValue() : 0;
-    }
-
-    /**
-     * Helper method to safely convert long to int
-     */
-    private int safeIntValue(long value) {
-        return (int) value;
     }
 
     private String formatMontant(Double montant) {
@@ -513,5 +350,65 @@ public class DashboardService {
             return "0 DT";
         }
         return String.format("%.2f DT", montant);
+    }
+
+    // Classe pour le résultat d'équilibrage
+    public static class ResultatEquilibrageDTO {
+        private Long nombreFichiersValides = 0L;
+        private Long nombreCarthagoRecus = 0L;
+        private Long nombreCarthagoTraites = 0L;
+        private Long nombreCTRRecus = 0L;
+
+        private Double montantFichiers = 0.0;
+        private Double montantCarthagoTraites = 0.0;
+        private Double montantCTR = 0.0;
+
+        private Long ecartFichierCarthago = 0L;
+        private Long ecartCarthagoCTR = 0L;
+        private Double ecartMontantGlobal = 0.0;
+
+        private boolean coherenceFichierCarthago = true;
+        private boolean coherenceCarthagoCTR = true;
+        private boolean coherenceMontants = true;
+
+        // Getters et setters...
+        public Long getNombreFichiersValides() { return nombreFichiersValides; }
+        public void setNombreFichiersValides(Long nombreFichiersValides) { this.nombreFichiersValides = nombreFichiersValides; }
+
+        public Long getNombreCarthagoRecus() { return nombreCarthagoRecus; }
+        public void setNombreCarthagoRecus(Long nombreCarthagoRecus) { this.nombreCarthagoRecus = nombreCarthagoRecus; }
+
+        public Long getNombreCarthagoTraites() { return nombreCarthagoTraites; }
+        public void setNombreCarthagoTraites(Long nombreCarthagoTraites) { this.nombreCarthagoTraites = nombreCarthagoTraites; }
+
+        public Long getNombreCTRRecus() { return nombreCTRRecus; }
+        public void setNombreCTRRecus(Long nombreCTRRecus) { this.nombreCTRRecus = nombreCTRRecus; }
+
+        public Double getMontantFichiers() { return montantFichiers; }
+        public void setMontantFichiers(Double montantFichiers) { this.montantFichiers = montantFichiers; }
+
+        public Double getMontantCarthagoTraites() { return montantCarthagoTraites; }
+        public void setMontantCarthagoTraites(Double montantCarthagoTraites) { this.montantCarthagoTraites = montantCarthagoTraites; }
+
+        public Double getMontantCTR() { return montantCTR; }
+        public void setMontantCTR(Double montantCTR) { this.montantCTR = montantCTR; }
+
+        public Long getEcartFichierCarthago() { return ecartFichierCarthago; }
+        public void setEcartFichierCarthago(Long ecartFichierCarthago) { this.ecartFichierCarthago = ecartFichierCarthago; }
+
+        public Long getEcartCarthagoCTR() { return ecartCarthagoCTR; }
+        public void setEcartCarthagoCTR(Long ecartCarthagoCTR) { this.ecartCarthagoCTR = ecartCarthagoCTR; }
+
+        public Double getEcartMontantGlobal() { return ecartMontantGlobal; }
+        public void setEcartMontantGlobal(Double ecartMontantGlobal) { this.ecartMontantGlobal = ecartMontantGlobal; }
+
+        public boolean isCoherenceFichierCarthago() { return coherenceFichierCarthago; }
+        public void setCoherenceFichierCarthago(boolean coherenceFichierCarthago) { this.coherenceFichierCarthago = coherenceFichierCarthago; }
+
+        public boolean isCoherenceCarthagoCTR() { return coherenceCarthagoCTR; }
+        public void setCoherenceCarthagoCTR(boolean coherenceCarthagoCTR) { this.coherenceCarthagoCTR = coherenceCarthagoCTR; }
+
+        public boolean isCoherenceMontants() { return coherenceMontants; }
+        public void setCoherenceMontants(boolean coherenceMontants) { this.coherenceMontants = coherenceMontants; }
     }
 }
