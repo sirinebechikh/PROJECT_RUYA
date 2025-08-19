@@ -4,6 +4,12 @@
   "compilerOptions": {
     "baseUrl": "./",
     "outDir": "./dist/out-tsc",
+    "paths": {
+      "@app/*": ["src/app/*"],
+      "@services/*": ["src/app/services/*"],
+      "@components/*": ["src/app/theme/shared/components/*"],
+      "@environments/*": ["src/environments/*"]
+    },
     "forceConsistentCasingInFileNames": true,
     "noImplicitOverride": true,
     "allowSyntheticDefaultImports": true,
