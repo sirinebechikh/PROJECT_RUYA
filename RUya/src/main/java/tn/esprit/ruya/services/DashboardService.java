@@ -43,6 +43,7 @@ public class DashboardService {
         cardData.add(buildEquilibrageGlobalCard(start, end));
 
         response.setCardData(cardData);
+        response.setGlobalStats(buildGlobalStats(start, end));
         return response;
     }
 
@@ -337,6 +338,85 @@ public class DashboardService {
         }
 
         return resultat;
+    }
+
+    /**
+     * Construction des statistiques globales pour le dashboard
+     */
+    private List<StatCardDTO> buildGlobalStats(LocalDateTime start, LocalDateTime end) {
+        List<StatCardDTO> globalStats = new ArrayList<>();
+
+        try {
+            // Total des remises
+            Long totalRemises = fichierRepository.countByCreatedAtBetween(start, end);
+            Double montantTotalRemises = fichierRepository.sumMontantByCreatedAtBetween(start, end);
+            globalStats.add(new StatCardDTO(
+                String.valueOf(totalRemises), 
+                "Total Remises", 
+                formatMontant(montantTotalRemises)
+            ));
+
+            // Total des éléments traités
+            Long totalElementsTraites = carthagoRepository.countByCreatedAtBetweenAndStatutCheque(start, end, "TRAITE");
+            Double montantElementsTraites = carthagoRepository.sumMontantByCreatedAtBetweenAndStatutCheque(start, end, "TRAITE");
+            globalStats.add(new StatCardDTO(
+                String.valueOf(totalElementsTraites), 
+                "Éléments Traités", 
+                formatMontant(montantElementsTraites)
+            ));
+
+            // Taux de réussite global
+            Long fichiersValides = fichierRepository.countByCreatedAtBetweenAndValidationBO(start, end, true);
+            Long totalFichiers = fichierRepository.countByCreatedAtBetween(start, end);
+            Double tauxReussite = totalFichiers > 0 ? (fichiersValides * 100.0) / totalFichiers : 0.0;
+            String statusTaux = tauxReussite > 90 ? "Excellent" : tauxReussite > 70 ? "Bon" : "À améliorer";
+            globalStats.add(new StatCardDTO(
+                String.format("%.1f%%", tauxReussite), 
+                "Taux de Validation", 
+                null, 
+                statusTaux
+            ));
+
+            // Dernière mise à jour
+            globalStats.add(new StatCardDTO(
+                LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm")), 
+                "Dernière MAJ", 
+                null, 
+                null
+            ));
+
+            // État global du système
+            ResultatEquilibrageDTO equilibrage = calculerEquilibrageGlobalCorrect(start, end);
+            boolean systemeEquilibre = equilibrage.isCoherenceFichierCarthago() && 
+                                     equilibrage.isCoherenceCarthagoCTR() && 
+                                     equilibrage.isCoherenceMontants();
+            globalStats.add(new StatCardDTO(
+                systemeEquilibre ? "OK" : "ALERTE", 
+                "État Système", 
+                null, 
+                systemeEquilibre ? "success" : "warning"
+            ));
+
+            // Total CTR reçus
+            Long totalCTR = ctrRepository.countByCreatedAtBetween(start, end);
+            Double montantCTR = ctrRepository.sumMontantByCreatedAtBetween(start, end);
+            globalStats.add(new StatCardDTO(
+                String.valueOf(totalCTR), 
+                "Total CTR", 
+                formatMontant(montantCTR)
+            ));
+
+        } catch (Exception e) {
+            // En cas d'erreur, ajouter une stat d'erreur
+            globalStats.add(new StatCardDTO(
+                "ERROR", 
+                "Erreur Calcul", 
+                null, 
+                "danger"
+            ));
+        }
+
+        return globalStats;
     }
 
     // === MÉTHODES UTILITAIRES ===
