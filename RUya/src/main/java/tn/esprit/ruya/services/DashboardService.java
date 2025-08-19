@@ -135,14 +135,14 @@ public class DashboardService {
             Long fichiersValides = fichierRepository.countByCreatedAtBetweenAndValidation(start, end, true);
             Double montantFichiersValides = fichierRepository.sumMontantByCreatedAtBetweenAndValidation(start, end, true);
 
-            // Éléments reçus dans Carthago
+            // Éléments générés/reçus dans Carthago
             Long elementsRecus = carthagoRepository.countByCreatedAtBetweenAndSens(start, end, "ENTRANT");
             Double montantRecus = carthagoRepository.sumMontantByCreatedAtBetweenAndSens(start, end, "ENTRANT");
 
-            data.add(new DataRowDTO("Fichiers validés (à transmettre)", safeIntValue(fichiersValides),
+            data.add(new DataRowDTO("Fichiers validés", safeIntValue(fichiersValides),
                     formatMontant(montantFichiersValides), null));
 
-            data.add(new DataRowDTO("Éléments reçus Carthago", safeIntValue(elementsRecus),
+            data.add(new DataRowDTO("Générés dans Carthago", safeIntValue(elementsRecus),
                     formatMontant(montantRecus), null));
 
             // Vérification cohérence
@@ -241,6 +241,11 @@ public class DashboardService {
             String messageEquilibrage = equilibreNombre && equilibreMontant ? "Équilibré" : "Déséquilibré";
 
             data.add(new DataRowDTO("État équilibrage", messageEquilibrage, null, statusEquilibrage));
+
+            // Nombre de fichiers égaux dans CTR (si égalité stricte des nombres)
+            String nbEgaux = equilibreNombre ? String.valueOf(ctrRecus) : "0";
+            data.add(new DataRowDTO("Nombre de fichiers égaux dans CTR", nbEgaux, null,
+                    equilibreNombre ? "success" : "warning"));
 
         } catch (Exception e) {
             data.add(new DataRowDTO("Erreur", "Données indisponibles", null, "danger"));
