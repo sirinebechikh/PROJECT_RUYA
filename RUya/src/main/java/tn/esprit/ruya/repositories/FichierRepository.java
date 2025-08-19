@@ -46,10 +46,10 @@ public interface FichierRepository extends JpaRepository<Fichier, Long> {
 
     // === MÉTHODES VALIDATION BO ===
     @Query("SELECT COUNT(f) FROM Fichier f WHERE f.createdAt BETWEEN :start AND :end AND f.validation = :validation")
-    Long countByCreatedAtBetweenAndValidationBO(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end, @Param("validation") Boolean validation);
+    Long countByCreatedAtBetweenAndValidation(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end, @Param("validation") Boolean validation);
 
     @Query("SELECT COALESCE(SUM(f.montant), 0.0) FROM Fichier f WHERE f.createdAt BETWEEN :start AND :end AND f.validation = :validation")
-    Double sumMontantByCreatedAtBetweenAndValidationBO(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end, @Param("validation") Boolean validation);
+    Double sumMontantByCreatedAtBetweenAndValidation(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end, @Param("validation") Boolean validation);
 
     // === MÉTHODES STATUT REMISE ===
 
@@ -57,7 +57,7 @@ public interface FichierRepository extends JpaRepository<Fichier, Long> {
     // === MÉTHODES COMBINÉES POUR DASHBOARD ===
     @Query("SELECT COUNT(f) FROM Fichier f WHERE f.createdAt BETWEEN :start AND :end " +
             "AND f.genereParEncaisse = :genere AND f.validation = :valide")
-    Long countByCreatedAtBetweenAndGenereParEncaisseAndValidationBO(
+    Long countByCreatedAtBetweenAndGenereParEncaisseAndValidation(
             @Param("start") LocalDateTime start,
             @Param("end") LocalDateTime end,
             @Param("genere") Boolean genere,
@@ -65,7 +65,7 @@ public interface FichierRepository extends JpaRepository<Fichier, Long> {
 
     @Query("SELECT COALESCE(SUM(f.montant), 0.0) FROM Fichier f WHERE f.createdAt BETWEEN :start AND :end " +
             "AND f.genereParEncaisse = :genere AND f.validation = :valide")
-    Double sumMontantByCreatedAtBetweenAndGenereParEncaisseAndValidationBO(
+    Double sumMontantByCreatedAtBetweenAndGenereParEncaisseAndValidation(
             @Param("start") LocalDateTime start,
             @Param("end") LocalDateTime end,
             @Param("genere") Boolean genere,
@@ -73,7 +73,7 @@ public interface FichierRepository extends JpaRepository<Fichier, Long> {
 
     @Query("SELECT COUNT(f) FROM Fichier f WHERE f.createdAt BETWEEN :start AND :end " +
             "AND f.natureFichier = :nature AND f.genereParEncaisse = :genere AND f.validation = :valide")
-    Long countByCreatedAtBetweenAndNatureFichierAndGenereParEncaisseAndValidationBO(
+    Long countByCreatedAtBetweenAndNatureFichierAndGenereParEncaisseAndValidation(
             @Param("start") LocalDateTime start,
             @Param("end") LocalDateTime end,
             @Param("nature") String nature,
@@ -82,7 +82,7 @@ public interface FichierRepository extends JpaRepository<Fichier, Long> {
 
     @Query("SELECT COALESCE(SUM(f.montant), 0.0) FROM Fichier f WHERE f.createdAt BETWEEN :start AND :end " +
             "AND f.natureFichier = :nature AND f.genereParEncaisse = :genere AND f.validation = :valide")
-    Double sumMontantByCreatedAtBetweenAndNatureFichierAndGenereParEncaisseAndValidationBO(
+    Double sumMontantByCreatedAtBetweenAndNatureFichierAndGenereParEncaisseAndValidation(
             @Param("start") LocalDateTime start,
             @Param("end") LocalDateTime end,
             @Param("nature") String nature,
@@ -107,5 +107,5 @@ public interface FichierRepository extends JpaRepository<Fichier, Long> {
 
     // === COMBINAISONS COMPLEXES EXISTANTES ===
     Long countByCreatedAtBetweenAndTypeFichierAndOrigineSaisie(LocalDateTime start, LocalDateTime end, String typeFichier, String origineSaisie);
-    Long countByCreatedAtBetweenAndValidationBOAndCodeValeur(LocalDateTime start, LocalDateTime end, Boolean validationBO, String codeValeur);
+    Long countByCreatedAtBetweenAndValidationAndCodeValeur(LocalDateTime start, LocalDateTime end, Boolean validation, String codeValeur);
 }

@@ -96,13 +96,13 @@ public class DashboardService {
 
         try {
             // Fichiers validés
-            Long fichiersValides = fichierRepository.countByCreatedAtBetweenAndValidationBO(start, end, true);
-            Double montantValides = fichierRepository.sumMontantByCreatedAtBetweenAndValidationBO(start, end, true);
+            Long fichiersValides = fichierRepository.countByCreatedAtBetweenAndValidation(start, end, true);
+            Double montantValides = fichierRepository.sumMontantByCreatedAtBetweenAndValidation(start, end, true);
             data.add(new DataRowDTO("Fichiers validés", safeIntValue(fichiersValides),
                     formatMontant(montantValides), "success"));
 
             // Fichiers en attente
-            Long fichiersAttente = fichierRepository.countByCreatedAtBetweenAndValidationBO(start, end, false);
+            Long fichiersAttente = fichierRepository.countByCreatedAtBetweenAndValidation(start, end, false);
             data.add(new DataRowDTO("En attente validation", safeIntValue(fichiersAttente), null, "warning"));
 
             // Taux de validation
@@ -132,8 +132,8 @@ public class DashboardService {
 
         try {
             // Fichiers validés (doivent être transmis)
-            Long fichiersValides = fichierRepository.countByCreatedAtBetweenAndValidationBO(start, end, true);
-            Double montantFichiersValides = fichierRepository.sumMontantByCreatedAtBetweenAndValidationBO(start, end, true);
+            Long fichiersValides = fichierRepository.countByCreatedAtBetweenAndValidation(start, end, true);
+            Double montantFichiersValides = fichierRepository.sumMontantByCreatedAtBetweenAndValidation(start, end, true);
 
             // Éléments reçus dans Carthago
             Long elementsRecus = carthagoRepository.countByCreatedAtBetweenAndSens(start, end, "ENTRANT");
@@ -298,8 +298,8 @@ public class DashboardService {
 
         try {
             // Données Fichiers
-            Long fichiersValides = fichierRepository.countByCreatedAtBetweenAndValidationBO(start, end, true);
-            Double montantFichiers = fichierRepository.sumMontantByCreatedAtBetweenAndValidationBO(start, end, true);
+            Long fichiersValides = fichierRepository.countByCreatedAtBetweenAndValidation(start, end, true);
+            Double montantFichiers = fichierRepository.sumMontantByCreatedAtBetweenAndValidation(start, end, true);
 
             // Données Carthago
             Long carthagoRecus = carthagoRepository.countByCreatedAtBetweenAndSens(start, end, "ENTRANT");
@@ -366,7 +366,7 @@ public class DashboardService {
             ));
 
             // Taux de réussite global
-            Long fichiersValides = fichierRepository.countByCreatedAtBetweenAndValidationBO(start, end, true);
+            Long fichiersValides = fichierRepository.countByCreatedAtBetweenAndValidation(start, end, true);
             Long totalFichiers = fichierRepository.countByCreatedAtBetween(start, end);
             Double tauxReussite = totalFichiers > 0 ? (fichiersValides * 100.0) / totalFichiers : 0.0;
             String statusTaux = tauxReussite > 90 ? "Excellent" : tauxReussite > 70 ? "Bon" : "À améliorer";
